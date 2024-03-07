@@ -58,11 +58,15 @@ class FigureSceneDataset(Dataset):
         return len(self.scene_path_list)
 
     def __getitem__(self, idx):
-        print(idx)
+        # print(idx)
         scene_path = self.scene_path_list[idx]
         inpainting_image_path_list = self.inpainting_image_path_list[idx]
         figure_path = self.figure_path_list[idx]
         descriptions = self.description_list[idx]
+
+        # print(scene_path)
+        # print(self.dataset_path)
+        # print(Path(self.dataset_path))
 
         scene_img = Image.open(Path(self.dataset_path) / scene_path)
         scene_img = scene_img.convert("RGB")
@@ -117,25 +121,34 @@ def _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE):
     fiugre_path_list = []
     description_list = []
 
+    print("Start Loading Metadata...")
     for series_name in phase3_record["dataset_dict"].keys():
         print(f"series_name: {series_name}")
         for ep_name in phase3_record["dataset_dict"][series_name].keys():
             print(f"\t ep_name: {ep_name}")
             ep = phase3_record["dataset_dict"][series_name][ep_name]
             for idx_scene, scene in enumerate(ep):
-                print(f"\t\t scene idx: {idx_scene}")
+                # print(f"\t\t scene idx: {idx_scene}")
                 scene_data = scene["scene_data"]
                 
                 scene_path_list.append(scene_data["image_path_scene"])
                 inpainting_image_path_list.append(scene_data["image_path_inpainting"])
                 fiugre_path_list.append(scene_data["image_path_cropped_figures_with_bbox_segmt"])
                 description_list.append(scene_data["image_scene_llava_description"])
-                
+    print("Finish Loading Metadata...")            
+    
     return scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list
 
 def get_dataloader(PHASE3_SCENE_DESCRIPTION_FILE, batch_size, dataset_path="./", MAX_NUM_FIGURE=5, shuffle=False):
     scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list = _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE)
-    figure_scene_dataset = FigureSceneDataset(scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list, dataset_path, MAX_NUM_FIGURE)
+    figure_scene_dataset = FigureSceneDataset(
+        scene_path_list=scene_path_list,
+        inpainting_image_path_list=inpainting_image_path_list,
+        fiugre_path_list=fiugre_path_list,
+        description_list=description_list,
+        MAX_NUM_FIGURE=MAX_NUM_FIGURE,
+        dataset_path=dataset_path
+    )
     figure_scene_dataloader = DataLoader(figure_scene_dataset, batch_size, shuffle)
     
     return figure_scene_dataloader
@@ -149,7 +162,7 @@ def display_data(dataloader,num_of_batch):
         plt.figure()
         plt.imshow(inpainting_img[0])
 
-        for i in range(num_figure):
+        for i in range(num_figure[0]):
             plt.figure()
             plt.imshow(figure_img_list[0][i].permute(1,2,0))
         
