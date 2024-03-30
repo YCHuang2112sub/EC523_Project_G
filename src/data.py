@@ -19,7 +19,8 @@ def _random_pad_to_size(image, size=(256,256), transform=None):
     ratio = max(H / size[0], W / size[1])
     if ratio > 1:
         print("ratio: ", ratio)
-        image = F.interpolate(image[None], size=(int(H/ratio), int(W/ratio)), mode='bilinear', align_corners=False)[0]
+        #image = F.interpolate(image[None], size=(int(H/ratio), int(W/ratio)), mode='bilinear', align_corners=False)[0]
+        image = F.interpolate(image[None].float(), size=(int(H/ratio), int(W/ratio)), mode='bilinear', align_corners=False)[0].byte()
     C, H, W = image.shape
 
     # Calculating the padding needed
