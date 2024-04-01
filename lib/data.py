@@ -65,6 +65,7 @@ class FigureSceneDataset(Dataset):
                      "figure_path_list": fiugre_path_list, 
                      "description_list": description_list
                      }
+        # print(self.data["inpainting_image_path_list"][0])
         # self.scene_path_list = scene_path_list
         # self.inpainting_image_path_list = inpainting_image_path_list
         # self.figure_path_list = fiugre_path_list
@@ -137,6 +138,7 @@ class FigureSceneDataset(Dataset):
         len_descriptions = len(description_list)
         i = np.random.randint(0, len_descriptions)
         description = description_list[i]["description"].split("ASSISTANT:")[1]
+        description = "This is a Japanese anime style image. " + ". ".join(description.split(".")[:-2])
         return description
     
     def __getitem__(self, idx):
@@ -153,7 +155,7 @@ class FigureSceneDataset(Dataset):
         sampled_data = {}
         for k, v in self.data.items():
             sampled_data[k] = v[idx]
-
+        
         sampled_data["scene_img"] = self.get_scene_img_from_path(sampled_data["scene_path_list"])
         sampled_data["inpainting_img"] = self.get_inpainting_img_from_path(sampled_data["inpainting_image_path_list"])
         sampled_data["figure_img_list"], sampled_data["len_figure"] = self.get_figure_img_from_path(sampled_data["figure_path_list"])
@@ -219,7 +221,7 @@ def get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path="./", MAX_NUM_FIGURE
         MAX_NUM_FIGURE=MAX_NUM_FIGURE,
         dataset_path=dataset_path
     )
-    return figure_scene_dataset
+    return data_path_dict, figure_scene_dataset
 
 
 # def get_dataloader(PHASE3_SCENE_DESCRIPTION_FILE, batch_size, dataset_path="./", MAX_NUM_FIGURE=5, shuffle=False):
