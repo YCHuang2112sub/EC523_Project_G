@@ -1,0 +1,25 @@
+wandb: Currently logged in as: yxy007 (seeene). Use `wandb login --relogin` to force relogin
+04/01/2024 01:05:45 - INFO - __main__ - Distributed environment: NO
+Num processes: 1
+Process index: 0
+Local process index: 0
+Device: cuda
+
+Mixed precision type: no
+
+Traceback (most recent call last):
+  File "control_net_train.py", line 755, in <module>
+    tokenizer = get_tokenizer(args, accelerator)
+  File "C:\Users\Ene\Desktop\BU\Spring24\Project\EC523_Project_G\src\control_net_config.py", line 429, in get_tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+  File "C:\Users\Ene\AppData\Roaming\Python\Python38\site-packages\transformers\models\auto\tokenization_auto.py", line 794, in from_pretrained
+    config = AutoConfig.from_pretrained(
+  File "C:\Users\Ene\AppData\Roaming\Python\Python38\site-packages\transformers\models\auto\configuration_auto.py", line 1138, in from_pretrained
+    config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+  File "C:\Users\Ene\AppData\Roaming\Python\Python38\site-packages\transformers\configuration_utils.py", line 631, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+  File "C:\Users\Ene\AppData\Roaming\Python\Python38\site-packages\transformers\configuration_utils.py", line 686, in _get_config_dict
+    resolved_config_file = cached_file(
+  File "C:\Users\Ene\AppData\Roaming\Python\Python38\site-packages\transformers\utils\hub.py", line 369, in cached_file
+    raise EnvironmentError(
+OSError: stabilityai/stable-diffusion-2-1-base does not appear to have a file named tokenizer\config.json. Checkout 'https://huggingface.co/stabilityai/stable-diffusion-2-1-base/tree/None' for available files.

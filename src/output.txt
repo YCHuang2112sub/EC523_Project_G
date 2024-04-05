@@ -1,0 +1,19 @@
+
+    _|    _|  _|    _|    _|_|_|    _|_|_|  _|_|_|  _|      _|    _|_|_|      _|_|_|_|    _|_|      _|_|_|  _|_|_|_|
+    _|    _|  _|    _|  _|        _|          _|    _|_|    _|  _|            _|        _|    _|  _|        _|
+    _|_|_|_|  _|    _|  _|  _|_|  _|  _|_|    _|    _|  _|  _|  _|  _|_|      _|_|_|    _|_|_|_|  _|        _|_|_|
+    _|    _|  _|    _|  _|    _|  _|    _|    _|    _|    _|_|  _|    _|      _|        _|    _|  _|        _|
+    _|    _|    _|_|      _|_|_|    _|_|_|  _|_|_|  _|      _|    _|_|_|      _|        _|    _|    _|_|_|  _|_|_|_|
+
+    A token is already saved on your machine. Run `huggingface-cli whoami` to get more information or `huggingface-cli logout` if you want to log out.
+    Setting a new token will erase the existing one.
+    To login, `huggingface_hub` requires a token generated from https://huggingface.co/settings/tokens .
+Token can be pasted using 'Right-Click'.
+Add token as git credential? (Y/n) Token is valid (permission: read).
+Your token has been saved in your configured git credential helpers (manager).
+Your token has been saved to C:\Users\Ene\.cache\huggingface\token
+Login successful
+Start Loading Metadata...
+series_name: usagi_s1_
+series_name: cute
+Finish Loading Metadata...

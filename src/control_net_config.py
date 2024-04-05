@@ -1,4 +1,31 @@
+import sys
+import os
+
+current_script_dir = os.path.dirname(__file__)
+parent_dir = os.path.abspath(os.path.join(current_script_dir, '..'))
+sys.path.insert(0, parent_dir)
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+if script_dir not in sys.path:
+    sys.path.append(script_dir)
+
 import argparse
+from diffusers.utils.torch_utils import is_compiled_module
+from transformers import AutoTokenizer, PretrainedConfig
+from diffusers import (
+    AutoencoderKL,
+    # ControlNetModel,
+    DDPMScheduler,
+    StableDiffusionControlNetPipeline,
+    UNet2DConditionModel,
+    UniPCMultistepScheduler,
+)
+import torch
+from lib.controlnet_self import ControlNetModel_SELF as ControlNetModel
+from lib.controlnet_self import MultiControlNetModel_SELF
+from packaging import version
+import accelerate
+from diffusers.utils.import_utils import is_xformers_available
 
 def parse_args(BATCH_SIZE, input_args=None):
     parser = argparse.ArgumentParser(description="Simple example of a ControlNet training script.")
@@ -380,3 +407,141 @@ def get_args_list(BATCH_SIZE, num_train_epochs, checkpointing_steps, validation_
         ]
     return args_list
 
+def import_model_class_from_model_name_or_path(pretrained_model_name_or_path: str, revision: str, HUGGING_FACE_CACHE_DIR):
+    text_encoder_config = PretrainedConfig.from_pretrained(
+        pretrained_model_name_or_path,
+        subfolder="text_encoder",
+        revision=revision,
+        cache_dir = HUGGING_FACE_CACHE_DIR,
+    )
+    model_class = text_encoder_config.architectures[0]
+
+    if model_class == "CLIPTextModel":
+        from transformers import CLIPTextModel
+
+        return CLIPTextModel
+    elif model_class == "RobertaSeriesModelWithTransformation":
+        from diffusers.pipelines.alt_diffusion.modeling_roberta_series import RobertaSeriesModelWithTransformation
+
+        return RobertaSeriesModelWithTransformation
+    else:
+        raise ValueError(f"{model_class} is not supported.")
+
+def unwrap_model(model, accelerator):
+    model = accelerator.unwrap_model(model)
+    model = model._orig_mod if is_compiled_module(model) else model
+    return model
+
+def get_tokenizer(args, accelerator):
+    # Load the tokenizer
+    if args.tokenizer_name:
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, revision=args.revision, use_fast=False)
+    elif args.pretrained_model_name_or_path:
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.pretrained_model_name_or_path,
+            subfolder="tokenizer",
+            revision=args.revision,
+            use_fast=False,
+        )
+
+    return tokenizer
+
+def load_and_setting_models(args, accelerator, HUGGING_FACE_CACHE_DIR):
+    # import correct text encoder class
+    text_encoder_cls = import_model_class_from_model_name_or_path(args.pretrained_model_name_or_path, args.revision, HUGGING_FACE_CACHE_DIR)
+
+    # Load scheduler and models
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    text_encoder = text_encoder_cls.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision, variant=args.variant,
+        cache_dir = HUGGING_FACE_CACHE_DIR,
+    )
+    vae = AutoencoderKL.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant,
+        cache_dir = HUGGING_FACE_CACHE_DIR,
+    )
+
+    return noise_scheduler, text_encoder, vae
+
+def get_controlnet_unet(args, accelerator, logger, HUGGING_FACE_CACHE_DIR):
+    unet = UNet2DConditionModel.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant,
+        cache_dir = HUGGING_FACE_CACHE_DIR,
+    )
+    
+    if args.controlnet_model_name_or_path:
+        logger.info("Loading existing controlnet weights")
+        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path,
+                                                        cache_dir = HUGGING_FACE_CACHE_DIR,
+                                                        )
+    else:
+        logger.info("Initializing controlnet weights from unet")
+        controlnet = ControlNetModel.from_unet(unet)
+
+
+    # `accelerate` 0.16.0 will have better support for customized saving
+    if version.parse(accelerate.__version__) >= version.parse("0.16.0"):
+        # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
+        def save_model_hook(models, weights, output_dir):
+            if accelerator.is_main_process:
+                i = len(weights) - 1
+
+                while len(weights) > 0:
+                    weights.pop()
+                    model = models[i]
+
+                    sub_dir = "controlnet"
+                    model.save_pretrained(os.path.join(output_dir, sub_dir))
+
+                    i -= 1
+
+        def load_model_hook(models, input_dir):
+            while len(models) > 0:
+                # pop models so that they are not loaded again
+                model = models.pop()
+
+                # load diffusers style into model
+                load_model = ControlNetModel.from_pretrained(input_dir, subfolder="controlnet")
+                model.register_to_config(**load_model.config)
+
+                model.load_state_dict(load_model.state_dict())
+                del load_model
+
+        accelerator.register_save_state_pre_hook(save_model_hook)
+        accelerator.register_load_state_pre_hook(load_model_hook)
+
+
+    if args.enable_xformers_memory_efficient_attention:
+        if is_xformers_available():
+            import xformers
+
+            xformers_version = version.parse(xformers.__version__)
+            if xformers_version == version.parse("0.0.16"):
+                logger.warn(
+                    "xFormers 0.0.16 cannot be used for training in some GPUs. If you observe problems during training, please update xFormers to at least 0.0.17. See https://huggingface.co/docs/diffusers/main/en/optimization/xformers for more details."
+                )
+            unet.enable_xformers_memory_efficient_attention()
+            controlnet.enable_xformers_memory_efficient_attention()
+        else:
+            raise ValueError("xformers is not available. Make sure it is installed correctly")
+
+    if args.gradient_checkpointing:
+        controlnet.enable_gradient_checkpointing()
+
+    # Check that all trainable models are in full precision
+    low_precision_error_string = (
+        " Please make sure to always have all model weights in full float32 precision when starting training - even if"
+        " doing mixed precision training, copy of the weights should still be float32."
+    )
+
+    if unwrap_model(controlnet, accelerator).dtype != torch.float32:
+        raise ValueError(
+            f"Controlnet loaded as datatype {unwrap_model(controlnet, accelerator).dtype}. {low_precision_error_string}"
+        )
+
+    # Enable TF32 for faster training on Ampere GPUs,
+    # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+    if args.allow_tf32:
+        torch.backends.cuda.matmul.allow_tf32 = True
+
+    return controlnet, unet

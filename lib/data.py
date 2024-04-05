@@ -65,24 +65,10 @@ class FigureSceneDataset(Dataset):
                      "figure_path_list": fiugre_path_list, 
                      "description_list": description_list
                      }
-        # print(self.data["inpainting_image_path_list"][0])
-        # self.scene_path_list = scene_path_list
-        # self.inpainting_image_path_list = inpainting_image_path_list
-        # self.figure_path_list = fiugre_path_list
+ 
         self.MAX_NUM_FIGURE = MAX_NUM_FIGURE
-        # self.description_list = description_list
-
         self.dataset_path = dataset_path
         self.figure_transform_flag = figure_transform_flag
-
-        # self.image_transforms = torchvision.transforms.Compose(
-        #     [
-        #         # torchvision.transforms.Resize(args.resolution, interpolation=torchvision.transforms.InterpolationMode.BILINEAR),
-        #         # torchvision.transforms.CenterCrop(args.resolution),
-        #         torchvision.transforms.ToTensor(),
-        #         torchvision.transforms.Normalize([0.5], [0.5]),
-        #     ]
-        # )
 
     def __len__(self):
         return len(self.data["scene_path_list"])
@@ -130,8 +116,7 @@ class FigureSceneDataset(Dataset):
 
             figure_img = _random_pad_to_size(figure_img, size=(256, 256), transform=figure_transform)
             figure_img_list[i_figure] = figure_img / 255.0 - 0.5
-            # if (i_figure+1) == len_figure:
-            #     break
+
         return figure_img_list, len_figure
     
     def get_description(self, description_list):
@@ -142,16 +127,6 @@ class FigureSceneDataset(Dataset):
         return description
     
     def __getitem__(self, idx):
-        # print(idx)
-        # scene_path = self.data["scene_path_list"][idx]
-        # inpainting_image_path_list = self.data["inpainting_image_path_list"][idx]
-        # figure_path = self.data["figure_path_list"][idx]
-        # descriptions = self.data["description_list"][idx]
-
-        # print(scene_path)
-        # print(self.dataset_path)
-        # print(Path(self.dataset_path))
-        
         sampled_data = {}
         for k, v in self.data.items():
             sampled_data[k] = v[idx]
@@ -166,9 +141,6 @@ class FigureSceneDataset(Dataset):
         sampled_data.pop("figure_path_list")
         sampled_data.pop("description_list")
 
-        # return self.scene_path_list[idx], self.image_path_list[idx], self.fiugre_path_list[idx], self.description_list[idx]
-        # return scene_img, inpainting_img, figure_img_list, description, len_figure
-        # return {"scene_img": scene_img, "inpainting_img": inpainting_img, "figure_img_list": figure_img_list, "description": description, "len_figure": len_figure}
         return sampled_data
 
 def _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path):
@@ -210,35 +182,13 @@ def _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path):
 
 def get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path="./", MAX_NUM_FIGURE=5):
     data_path_dict = _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path)
-    # scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list = \
-    #     data_path_dict["scene_path_list"], data_path_dict["inpainting_image_path_list"], data_path_dict["fiugre_path_list"], data_path_dict["description_list"]
     figure_scene_dataset = FigureSceneDataset(
-        # scene_path_list=scene_path_list,
-        # inpainting_image_path_list=inpainting_image_path_list,
-        # fiugre_path_list=fiugre_path_list,
-        # description_list=description_list,
         data = data_path_dict,
         MAX_NUM_FIGURE=MAX_NUM_FIGURE,
         dataset_path=dataset_path
     )
     return data_path_dict, figure_scene_dataset
 
-
-# def get_dataloader(PHASE3_SCENE_DESCRIPTION_FILE, batch_size, dataset_path="./", MAX_NUM_FIGURE=5, shuffle=False):
-#     data_path_dict = _get_data_path(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path)
-#     scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list = \
-#         data_path_dict["scene_path_list"], data_path_dict["inpainting_image_path_list"], data_path_dict["fiugre_path_list"], data_path_dict["description_list"]
-#     figure_scene_dataset = FigureSceneDataset(
-#         scene_path_list=scene_path_list,
-#         inpainting_image_path_list=inpainting_image_path_list,
-#         fiugre_path_list=fiugre_path_list,
-#         description_list=description_list,
-#         MAX_NUM_FIGURE=MAX_NUM_FIGURE,
-#         dataset_path=dataset_path
-#     )
-#     figure_scene_dataloader = DataLoader(figure_scene_dataset, batch_size, shuffle)
-    
-#     return figure_scene_dataloader
 
 def display_data(dataloader,num_of_batch):
     for i in range(num_of_batch):

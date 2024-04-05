@@ -880,7 +880,6 @@ if __name__ == "__main__":
     login()
     
     MAX_NUM_FIGURE=1
-
     BATCH_SIZE = 8
     DATSET_SHUFFLE = True
     
@@ -888,7 +887,7 @@ if __name__ == "__main__":
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 400 // (BATCH_SIZE // 4) // 2
+    checkpointing_steps = 1600 // (BATCH_SIZE // 4) // 2
     validation_steps = checkpointing_steps 
     num_train_epochs = 50
     
@@ -927,7 +926,6 @@ if __name__ == "__main__":
         wrap_with_accelerator(args, train_dataloader, eval_dataloader, controlnet, optimizer, lr_scheduler, \
                                 vae, unet, text_encoder, accelerator, overrode_max_train_steps=overrode_max_train_steps)
         
-    
     
     with io.capture_output() as captured:
         training_loop(args, controlnet, optimizer, lr_scheduler, \
