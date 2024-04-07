@@ -549,23 +549,23 @@ def log_validation(
             )
 
             # print(f"validation_prompt: {batch['captions'][i]}")
-            from matplotlib import pyplot as plt
-            plt.figure()
-            plt.subplot(1, 3, 1)
-            plt.imshow(batch["pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
-            plt.title("GT")
-            plt.subplot(1, 3, 2)
-            plt.imshow(batch["conditioning_pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
-            plt.title("cond_01")
-            plt.subplot(1, 3, 3)
-            plt.imshow(batch["conditioning_pixel_values_02"][i].detach().cpu().data.permute(1, 2, 0))
-            plt.title("cond_02")
-            plt.figure()
-            plt.plot()
-            plt.title(f"Caption: {batch['captions'][i]}", fontsize=20)
-            plt.figure()
-            plt.imshow(img_grid_gen.detach().cpu())
-            plt.title(f"generated")
+            # from matplotlib import pyplot as plt
+            # plt.figure()
+            # plt.subplot(1, 3, 1)
+            # plt.imshow(batch["pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
+            # plt.title("GT")
+            # plt.subplot(1, 3, 2)
+            # plt.imshow(batch["conditioning_pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
+            # plt.title("cond_01")
+            # plt.subplot(1, 3, 3)
+            # plt.imshow(batch["conditioning_pixel_values_02"][i].detach().cpu().data.permute(1, 2, 0))
+            # plt.title("cond_02")
+            # plt.figure()
+            # plt.plot()
+            # plt.title(f"Caption: {batch['captions'][i]}", fontsize=20)
+            # plt.figure()
+            # plt.imshow(img_grid_gen.detach().cpu())
+            # plt.title(f"generated")
 
         if i_image > args.num_validation_images:
             break
@@ -870,7 +870,7 @@ if __name__ == "__main__":
     if added_path not in os.sys.path:
         os.sys.patsh.append(added_path) 
     
-    PHASE3_SCENE_DESCRIPTION_FILE = "./DATASET/PROCESSING_RECORD_PHASE3_SCENE_DESCRIPTION.json"
+    PHASE3_SCENE_DESCRIPTION_FILE = "./DATASET/PROCESSING_RECORD_PHASE3_SCENE_DESCRIPTION_train.json"
     dataset_path = os.path.abspath(project_main_path) # adjust the path to the dataset
     
     os.environ["WANDB_API_KEY"] = "80af4069cf927ce8e884699d422b0ddc3d7d1359"
@@ -881,14 +881,14 @@ if __name__ == "__main__":
     
     MAX_NUM_FIGURE=1
 
-    BATCH_SIZE = 8
+    BATCH_SIZE = 12
     DATSET_SHUFFLE = True
     
     data_path_dict, anime_figure_scene_dataset = anime_data.get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path, MAX_NUM_FIGURE=MAX_NUM_FIGURE)
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 400 // (BATCH_SIZE // 4) // 2
+    checkpointing_steps = 1600 // (BATCH_SIZE // 4) // 2
     validation_steps = checkpointing_steps 
     num_train_epochs = 50
     
