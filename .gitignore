@@ -6,3 +6,6 @@ diffusion*
 src/cache/*
 src/wandb/*
 src/model_out/*
+src/model_out_1/*
+inference/*
+
