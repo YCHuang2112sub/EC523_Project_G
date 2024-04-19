@@ -7,10 +7,16 @@ src/cache/*
 src/wandb/*
 src/model_out/*
 src/model_out_1/*
+src/output_image/*
+src/output_image_11704.zip
+src/output_image_12502.zip
+src/output_image_latest.zip
 src/wandb/*
+
 
 inference/output_image/*
 inference/wandb/*
 inference/256x256_diffusion_uncond.pt
 inference/config.json
 inference/output_image.rar
+
