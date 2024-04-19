@@ -141,7 +141,6 @@ These are controlnet weights trained on {base_model} with new type of conditioni
     model_card.save(os.path.join(repo_folder, "README.md"))
 
 def get_logger_and_accelerator(args, logger):
-    # Set up logging
     if args.report_to == "wandb" and args.hub_token is not None:
         raise ValueError(
             "You cannot use both --report_to=wandb and --hub_token due to a security risk of exposing your token."
@@ -213,7 +212,7 @@ def get_tokenizer(args, accelerator):
 def load_and_setting_models(args, accelerator, HUGGING_FACE_CACHE_DIR, logger):
     
 
-    # import correct text encoder class
+   # import correct text encoder class
     text_encoder_cls = import_model_class_from_model_name_or_path(args.pretrained_model_name_or_path, args.revision, HUGGING_FACE_CACHE_DIR)
 
     # Load scheduler and models
@@ -227,6 +226,8 @@ def load_and_setting_models(args, accelerator, HUGGING_FACE_CACHE_DIR, logger):
         cache_dir = HUGGING_FACE_CACHE_DIR,
     )
 
+
+    # return tokenizer, noise_scheduler, text_encoder, vae, unet, controlnet
     return noise_scheduler, text_encoder, vae
 
 def get_controlnet_unet(args, accelerator, HUGGING_FACE_CACHE_DIR, logger):
@@ -463,7 +464,7 @@ def wrap_with_accelerator(args, train_dataloader, eval_dataloader, controlnet, o
 
     return controlnet, optimizer, lr_scheduler, train_dataloader, eval_dataloader, vae, unet, text_encoder, \
         weight_dtype, num_update_steps_per_epoch
-
+        
 def log_validation(
     eval_dataloader, vae, text_encoder, tokenizer, unet, controlnet, \
     args, accelerator, weight_dtype, step, is_final_validation=False
@@ -510,6 +511,8 @@ def log_validation(
     else:
         generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
 
+
+
     global images
     image_logs = []
     inference_ctx = contextlib.nullcontext() if is_final_validation else torch.autocast("cuda")
@@ -518,9 +521,6 @@ def log_validation(
     for batch in tqdm(eval_dataloader, desc="Validation", unit="batch"):
         B = batch["pixel_values"].shape[0]
         for i in range(B):
-            # print(batch["captions"][i])
-            # print(batch["conditioning_pixel_values"][i].shape, batch["conditioning_pixel_values_02"][i].shape)
-    
             i_image += 1
             if i_image > args.num_validation_images:
                 break
@@ -614,229 +614,226 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
                   logger, repo_id, num_update_steps_per_epoch
                   ):
     
-    vae.requires_grad_(False)
-    unet.requires_grad_(False)
-    text_encoder.requires_grad_(False)
-    
-    vae.eval()
-    text_encoder.eval()
-    unet.eval()
-    controlnet.train()
+        vae.requires_grad_(False)
+        unet.requires_grad_(False)
+        text_encoder.requires_grad_(False)
+        
+        vae.eval()
+        text_encoder.eval()
+        unet.eval()
+        controlnet.train()
 
 
-    # Train!
-    total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+        # Train!
+        total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
-    logger.info("***** Running training *****")
-    logger.info(f"  Num examples = {len(train_dataloader.dataset)}")
-    logger.info(f"  Num batches each epoch = {len(train_dataloader)}")
-    logger.info(f"  Num Epochs = {args.num_train_epochs}")
-    logger.info(f"  Instantaneous batch size per device = {args.train_batch_size}")
-    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
-    logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
-    logger.info(f"  Total optimization steps = {args.max_train_steps}")
-    global_step = 0
-    first_epoch = 0
+        logger.info("***** Running training *****")
+        logger.info(f"  Num examples = {len(train_dataloader.dataset)}")
+        logger.info(f"  Num batches each epoch = {len(train_dataloader)}")
+        logger.info(f"  Num Epochs = {args.num_train_epochs}")
+        logger.info(f"  Instantaneous batch size per device = {args.train_batch_size}")
+        logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+        logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+        logger.info(f"  Total optimization steps = {args.max_train_steps}")
+        global_step = 0
+        first_epoch = 0
 
-    # Potentially load in the weights and states from a previous save
-    if args.resume_from_checkpoint:
-        print(f"resume_from_checkpoint")
-        if args.resume_from_checkpoint != "latest":
-            path = os.path.basename(args.resume_from_checkpoint)
-        else:
-            # Get the most recent checkpoint
-            dirs = os.listdir(args.output_dir)
-            dirs = [d for d in dirs if d.startswith("checkpoint")]
-            dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
-            path = dirs[-1] if len(dirs) > 0 else None
+        # Potentially load in the weights and states from a previous save
+        if args.resume_from_checkpoint:
+            if args.resume_from_checkpoint != "latest":
+                path = os.path.basename(args.resume_from_checkpoint)
+            else:
+                # Get the most recent checkpoint
+                dirs = os.listdir(args.output_dir)
+                dirs = [d for d in dirs if d.startswith("checkpoint")]
+                dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
+                path = dirs[-1] if len(dirs) > 0 else None
 
-        if path is None:
-            accelerator.print(
-                f"Checkpoint '{args.resume_from_checkpoint}' does not exist. Starting a new training run."
-            )
-            args.resume_from_checkpoint = None
-            initial_global_step = 0
-        else:
-            accelerator.print(f"Resuming from checkpoint {path}")
-            accelerator.load_state(os.path.join(args.output_dir, path))
-            global_step = int(path.split("-")[1])
-
-            initial_global_step = global_step
-            first_epoch = global_step // num_update_steps_per_epoch
-    else:
-        initial_global_step = 0
-
-    progress_bar = tqdm(
-        range(0, args.max_train_steps),
-        initial=initial_global_step,
-        desc="Steps",
-        # Only show the progress bar once on each machine.
-        disable=not accelerator.is_local_main_process,
-    )
-
-    image_logs = None
-    for epoch in tqdm(range(first_epoch, args.num_train_epochs)):
-        for step, batch in enumerate(train_dataloader):
-            # THE FOLLOWING CODE SHOUD NOT HAVE ANY OUTPUT OF CELL
-            
-            
-            vae.eval()
-            text_encoder.eval()
-            unet.eval()
-            controlnet.train()
-            with accelerator.accumulate(controlnet):
-                # Convert images to latent space
-                # print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
-                latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
-                latents = latents * vae.config.scaling_factor
-
-                # Sample noise that we'll add to the latents
-                noise = torch.randn_like(latents)
-                bsz = latents.shape[0]
-                # Sample a random timestep for each image
-                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
-                timesteps = timesteps.long()
-
-                # Add noise to the latents according to the noise magnitude at each timestep
-                # (this is the forward diffusion process)
-                noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
-
-                # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
-
-                controlnet_image_01 = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
-                controlnet_image_02 = batch["conditioning_pixel_values_02"].to(dtype=weight_dtype)
-
-                # assert to be multi-controlnet
-                assert isinstance(controlnet, MultiControlNetModel_SELF)
-                down_block_res_samples, mid_block_res_sample = controlnet(
-                    noisy_latents,
-                    timesteps,
-                    encoder_hidden_states=encoder_hidden_states,
-                    controlnet_cond=[controlnet_image_01, controlnet_image_02],
-                    return_dict=False,
-                    conditioning_scale=[1.0]*2,
+            if path is None:
+                accelerator.print(
+                    f"Checkpoint '{args.resume_from_checkpoint}' does not exist. Starting a new training run."
                 )
-                
-                model_pred = unet(
-                    noisy_latents,
-                    timesteps,
-                    encoder_hidden_states=encoder_hidden_states,
-                    down_block_additional_residuals=[
-                        sample.to(dtype=weight_dtype) for sample in down_block_res_samples
-                    ],
-                    mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
-                    return_dict=False,
-                )[0]
+                args.resume_from_checkpoint = None
+                initial_global_step = 0
+            else:
+                accelerator.print(f"Resuming from checkpoint {path}")
+                accelerator.load_state(os.path.join(args.output_dir, path))
+                global_step = int(path.split("-")[1])
 
-                # Get the target for loss depending on the prediction type
-                if noise_scheduler.config.prediction_type == "epsilon":
-                    target = noise
-                elif noise_scheduler.config.prediction_type == "v_prediction":
-                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                else:
-                    raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                initial_global_step = global_step
+                first_epoch = global_step // num_update_steps_per_epoch
+        else:
+            initial_global_step = 0
 
-                accelerator.backward(loss)
-                if accelerator.sync_gradients:
-                    params_to_clip = controlnet.parameters()
-                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=args.set_grads_to_none)
+        progress_bar = tqdm(
+            range(0, args.max_train_steps),
+            initial=initial_global_step,
+            desc="Steps",
+            # Only show the progress bar once on each machine.
+            disable=not accelerator.is_local_main_process,
+        )
 
-            # Checks if the accelerator has performed an optimization step behind the scenes
-            if accelerator.sync_gradients:
-                progress_bar.update(1)
-                global_step += 1
-
-                if accelerator.is_main_process:
-                    if global_step % args.checkpointing_steps == 0:
-                        # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
-                        if args.checkpoints_total_limit is not None:
-                            checkpoints = os.listdir(args.output_dir)
-                            checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
-                            checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
-
-                            # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
-                            if len(checkpoints) >= args.checkpoints_total_limit:
-                                num_to_remove = len(checkpoints) - args.checkpoints_total_limit + 1
-                                removing_checkpoints = checkpoints[0:num_to_remove]
-
-                                logger.info(
-                                    f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
-                                )
-                                logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
-
-                                for removing_checkpoint in removing_checkpoints:
-                                    removing_checkpoint = os.path.join(args.output_dir, removing_checkpoint)
-                                    shutil.rmtree(removing_checkpoint)
-
-                        save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
-                        accelerator.save_state(save_path)
-                        logger.info(f"Saved state to {save_path}")
-
-                    # if args.validation_prompt is not None and global_step % args.validation_steps == 0:
-                    if global_step % args.validation_steps == 0:
-                        image_logs = log_validation(
-                            eval_dataloader,
-                            vae,
-                            text_encoder,
-                            tokenizer,
-                            unet,
-                            controlnet,
-                            args,
-                            accelerator,
-                            weight_dtype,
-                            global_step,
-                        )
-
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
-            progress_bar.set_postfix(**logs)
-            accelerator.log(logs, step=global_step)
-
-            if global_step >= args.max_train_steps:
-                break
-
-    # Create the pipeline using using the trained modules and save it.
-    accelerator.wait_for_everyone()
-    if accelerator.is_main_process:
-        controlnet = unwrap_model(controlnet, accelerator)
-        controlnet.save_pretrained(args.output_dir)
-
-        # Run a final round of validation.
         image_logs = None
-        if args.validation_prompt is not None:
-            image_logs = log_validation(\
-                eval_dataloader=eval_dataloader,
-                vae=vae,
-                text_encoder=text_encoder,
-                tokenizer=tokenizer,
-                unet=unet,
-                controlnet=controlnet,
-                args=args,
-                accelerator=accelerator,
-                weight_dtype=weight_dtype,
-                step=global_step,
-                is_final_validation=True,
-            )
+        for epoch in range(first_epoch, args.num_train_epochs):
+            for step, batch in enumerate(train_dataloader):
+                vae.eval()
+                text_encoder.eval()
+                unet.eval()
+                controlnet.train()
+                with accelerator.accumulate(controlnet):
+                    # Convert images to latent space
+                    # print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
+                    latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+                    latents = latents * vae.config.scaling_factor
 
-        if args.push_to_hub:
-            save_model_card(
-                repo_id,
-                image_logs=image_logs,
-                base_model=args.pretrained_model_name_or_path,
-                repo_folder=args.output_dir,
-            )
-            upload_folder(
-                repo_id=repo_id,
-                folder_path=args.output_dir,
-                commit_message="End of training",
-                ignore_patterns=["step_*", "epoch_*"],
-            )
+                    # Sample noise that we'll add to the latents
+                    noise = torch.randn_like(latents)
+                    bsz = latents.shape[0]
+                    # Sample a random timestep for each image
+                    timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
+                    timesteps = timesteps.long()
 
-    accelerator.end_training()
+                    # Add noise to the latents according to the noise magnitude at each timestep
+                    # (this is the forward diffusion process)
+                    noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+
+                    # Get the text embedding for conditioning
+                    encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
+
+                    controlnet_image_01 = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
+                    controlnet_image_02 = batch["conditioning_pixel_values_02"].to(dtype=weight_dtype)
+
+                    # assert to be multi-controlnet
+                    assert isinstance(controlnet, MultiControlNetModel_SELF)
+                    down_block_res_samples, mid_block_res_sample = controlnet(
+                        noisy_latents,
+                        timesteps,
+                        encoder_hidden_states=encoder_hidden_states,
+                        controlnet_cond=[controlnet_image_01, controlnet_image_02],
+                        return_dict=False,
+                        conditioning_scale=[1.0]*2,
+                    )
+
+                    # Predict the noise residual
+                    model_pred = unet(
+                        noisy_latents,
+                        timesteps,
+                        encoder_hidden_states=encoder_hidden_states,
+                        down_block_additional_residuals=[
+                            sample.to(dtype=weight_dtype) for sample in down_block_res_samples
+                        ],
+                        mid_block_additional_residual=mid_block_res_sample.to(dtype=weight_dtype),
+                        return_dict=False,
+                    )[0]
+
+                    # Get the target for loss depending on the prediction type
+                    if noise_scheduler.config.prediction_type == "epsilon":
+                        target = noise
+                    elif noise_scheduler.config.prediction_type == "v_prediction":
+                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                    else:
+                        raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
+                    loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
+                    accelerator.backward(loss)
+                    if accelerator.sync_gradients:
+                        params_to_clip = controlnet.parameters()
+                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad(set_to_none=args.set_grads_to_none)
+
+                # Checks if the accelerator has performed an optimization step behind the scenes
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
+
+                    if accelerator.is_main_process:
+                        if global_step % args.checkpointing_steps == 0:
+                            # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
+                            if args.checkpoints_total_limit is not None:
+                                checkpoints = os.listdir(args.output_dir)
+                                checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
+                                checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
+
+                                # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
+                                if len(checkpoints) >= args.checkpoints_total_limit:
+                                    num_to_remove = len(checkpoints) - args.checkpoints_total_limit + 1
+                                    removing_checkpoints = checkpoints[0:num_to_remove]
+
+                                    logger.info(
+                                        f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"
+                                    )
+                                    logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
+
+                                    for removing_checkpoint in removing_checkpoints:
+                                        removing_checkpoint = os.path.join(args.output_dir, removing_checkpoint)
+                                        shutil.rmtree(removing_checkpoint)
+
+                            save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
+                            accelerator.save_state(save_path)
+                            logger.info(f"Saved state to {save_path}")
+
+                        # if args.validation_prompt is not None and global_step % args.validation_steps == 0:
+                        if global_step % args.validation_steps == 0:
+                            image_logs = log_validation(
+                                eval_dataloader,
+                                vae,
+                                text_encoder,
+                                tokenizer,
+                                unet,
+                                controlnet,
+                                args,
+                                accelerator,
+                                weight_dtype,
+                                global_step,
+                            )
+
+                logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+                progress_bar.set_postfix(**logs)
+                accelerator.log(logs, step=global_step)
+
+                if global_step >= args.max_train_steps:
+                    break
+
+        # Create the pipeline using using the trained modules and save it.
+        accelerator.wait_for_everyone()
+        if accelerator.is_main_process:
+            controlnet = unwrap_model(controlnet, accelerator)
+            controlnet.save_pretrained(args.output_dir)
+
+            # Run a final round of validation.
+            image_logs = None
+            if args.validation_prompt is not None:
+                image_logs = log_validation(\
+                    eval_dataloader=eval_dataloader,
+                    vae=vae,
+                    text_encoder=text_encoder,
+                    tokenizer=tokenizer,
+                    unet=unet,
+                    controlnet=controlnet,
+                    args=args,
+                    accelerator=accelerator,
+                    weight_dtype=weight_dtype,
+                    step=global_step,
+                    is_final_validation=True,
+                )
+
+            if args.push_to_hub:
+                save_model_card(
+                    repo_id,
+                    image_logs=image_logs,
+                    base_model=args.pretrained_model_name_or_path,
+                    repo_folder=args.output_dir,
+                )
+                upload_folder(
+                    repo_id=repo_id,
+                    folder_path=args.output_dir,
+                    commit_message="End of training",
+                    ignore_patterns=["step_*", "epoch_*"],
+                )
+
+        accelerator.end_training()
 
 
 if __name__ == "__main__":
@@ -865,11 +862,11 @@ if __name__ == "__main__":
     BATCH_SIZE = 12
     DATSET_SHUFFLE = True
     
-    data_path_dict, anime_figure_scene_dataset = anime_data.get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path, MAX_NUM_FIGURE=MAX_NUM_FIGURE)
+    anime_figure_scene_dataset = anime_data.get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path, MAX_NUM_FIGURE=MAX_NUM_FIGURE)
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 1600 // (BATCH_SIZE // 4) // 2
+    checkpointing_steps = 1280 // (BATCH_SIZE // 4) // 2
     validation_steps = checkpointing_steps 
     num_train_epochs = 50
     
@@ -882,7 +879,7 @@ if __name__ == "__main__":
     controlnet, unet = get_controlnet_unet(args, accelerator, HUGGING_FACE_CACHE_DIR, logger)
 
     # to multi-controlnet, copy the same onw twice , 1 -> 2x
-    controlnet = MultiControlNetModel_SELF([controlnet, controlnet])
+    controlnet = MultiControlNetModel_SELF([controlnet, controlnet], controlnet_embedding_merging_mode=args.controlnet_embedding_merging_mode)
 
     noise_scheduler, text_encoder, vae = load_and_setting_models(args, accelerator,  HUGGING_FACE_CACHE_DIR, logger)
 

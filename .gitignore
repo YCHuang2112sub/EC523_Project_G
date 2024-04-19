@@ -5,3 +5,5 @@ diffusion*
 
 src/wandb/*
 src/model_out/*
+src/cache/*
+src/__pycache__/*
