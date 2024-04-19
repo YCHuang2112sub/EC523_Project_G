@@ -2,3 +2,6 @@
 # DATASET
 DATASET/*
 diffusion*
+
+src/wandb/*
+src/model_out/*
