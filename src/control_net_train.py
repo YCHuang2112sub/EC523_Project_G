@@ -79,7 +79,7 @@ def image_grid(imgs, rows, cols):
         grid.paste(img, box=(i % cols * w, i // cols * h))
     return grid
 
-def import_model_class_from_model_name_or_path(pretrained_model_name_or_path: str, revision: str):
+def import_model_class_from_model_name_or_path(pretrained_model_name_or_path: str, revision: str, HUGGING_FACE_CACHE_DIR):
     text_encoder_config = PretrainedConfig.from_pretrained(
         pretrained_model_name_or_path,
         subfolder="text_encoder",
@@ -140,7 +140,7 @@ These are controlnet weights trained on {base_model} with new type of conditioni
 
     model_card.save(os.path.join(repo_folder, "README.md"))
 
-def get_logger_and_accelerator(args):
+def get_logger_and_accelerator(args, logger):
     # Set up logging
     if args.report_to == "wandb" and args.hub_token is not None:
         raise ValueError(
@@ -210,11 +210,11 @@ def get_tokenizer(args, accelerator):
 
     return tokenizer
 
-def load_and_setting_models(args, accelerator):
+def load_and_setting_models(args, accelerator, HUGGING_FACE_CACHE_DIR, logger):
     
 
     # import correct text encoder class
-    text_encoder_cls = import_model_class_from_model_name_or_path(args.pretrained_model_name_or_path, args.revision)
+    text_encoder_cls = import_model_class_from_model_name_or_path(args.pretrained_model_name_or_path, args.revision, HUGGING_FACE_CACHE_DIR)
 
     # Load scheduler and models
     noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
@@ -229,7 +229,7 @@ def load_and_setting_models(args, accelerator):
 
     return noise_scheduler, text_encoder, vae
 
-def get_controlnet_unet(args, accelerator):
+def get_controlnet_unet(args, accelerator, HUGGING_FACE_CACHE_DIR, logger):
     unet = UNet2DConditionModel.from_pretrained(
         args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant,
         cache_dir = HUGGING_FACE_CACHE_DIR,
@@ -547,25 +547,6 @@ def log_validation(
                  "gen_images": images, 
                  "validation_prompt": batch["captions"][i]}
             )
-
-            # print(f"validation_prompt: {batch['captions'][i]}")
-            # from matplotlib import pyplot as plt
-            # plt.figure()
-            # plt.subplot(1, 3, 1)
-            # plt.imshow(batch["pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
-            # plt.title("GT")
-            # plt.subplot(1, 3, 2)
-            # plt.imshow(batch["conditioning_pixel_values"][i].detach().cpu().data.permute(1, 2, 0))
-            # plt.title("cond_01")
-            # plt.subplot(1, 3, 3)
-            # plt.imshow(batch["conditioning_pixel_values_02"][i].detach().cpu().data.permute(1, 2, 0))
-            # plt.title("cond_02")
-            # plt.figure()
-            # plt.plot()
-            # plt.title(f"Caption: {batch['captions'][i]}", fontsize=20)
-            # plt.figure()
-            # plt.imshow(img_grid_gen.detach().cpu())
-            # plt.title(f"generated")
 
         if i_image > args.num_validation_images:
             break
@@ -895,15 +876,15 @@ if __name__ == "__main__":
     args_list = get_args_list(BATCH_SIZE, num_train_epochs, checkpointing_steps, validation_steps)
     args = parse_args(BATCH_SIZE, input_args = args_list)
     
-    accelerator, logger, repo_id = get_logger_and_accelerator(args)
+    accelerator, logger, repo_id = get_logger_and_accelerator(args, logger)
     
     tokenizer = get_tokenizer(args, accelerator)
-    controlnet, unet = get_controlnet_unet(args, accelerator)
+    controlnet, unet = get_controlnet_unet(args, accelerator, HUGGING_FACE_CACHE_DIR, logger)
 
     # to multi-controlnet, copy the same onw twice , 1 -> 2x
     controlnet = MultiControlNetModel_SELF([controlnet, controlnet])
 
-    noise_scheduler, text_encoder, vae = load_and_setting_models(args, accelerator)
+    noise_scheduler, text_encoder, vae = load_and_setting_models(args, accelerator,  HUGGING_FACE_CACHE_DIR, logger)
 
     vae.requires_grad_(False)
     unet.requires_grad_(False)
