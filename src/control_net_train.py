@@ -688,7 +688,7 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
                 with accelerator.accumulate(controlnet):
                     # Convert images to latent space
                     # print(f"batch['pixel_values'].shape: {batch['pixel_values'].shape}")
-                    latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+                    latents = vae.encode(batch["pixel_values"].to(accelerator.device ,dtype=weight_dtype)).latent_dist.sample()
                     latents = latents * vae.config.scaling_factor
 
                     # Sample noise that we'll add to the latents
@@ -697,16 +697,16 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
                     # Sample a random timestep for each image
                     # print(f"-------------------------{latents.device}")
                     timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
-                    timesteps = timesteps.long()
+                    timesteps = timesteps.long().to(accelerator.device)
 
                     # Add noise to the latents according to the noise magnitude at each timestep
                     # (this is the forward diffusion process)
-                    noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+                    noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps).to(accelerator.device)
                     # Get the text embedding for conditioning
-                    encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
+                    encoder_hidden_states = text_encoder(batch["input_ids"].to(accelerator.device), return_dict=False)[0]
 
-                    controlnet_image_01 = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
-                    controlnet_image_02 = batch["conditioning_pixel_values_02"].to(dtype=weight_dtype)
+                    controlnet_image_01 = batch["conditioning_pixel_values"].to(accelerator.device, dtype=weight_dtype)
+                    controlnet_image_02 = batch["conditioning_pixel_values_02"].to(accelerator.device, dtype=weight_dtype)
                     
                     latents = latents.to(accelerator.device)
                     noise = noise.to(accelerator.device)
@@ -721,6 +721,8 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
 
                     # assert to be multi-controlnet
                     assert isinstance(controlnet, MultiControlNetModel_SELF)
+                    controlnet.to(accelerator.device)
+                    
                     down_block_res_samples, mid_block_res_sample = controlnet(
                         noisy_latents,
                         timesteps,
@@ -875,14 +877,14 @@ if __name__ == "__main__":
     
     MAX_NUM_FIGURE=1
 
-    BATCH_SIZE = 12
+    BATCH_SIZE = 8
     DATSET_SHUFFLE = True
     
     anime_figure_scene_dataset = anime_data.get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path, MAX_NUM_FIGURE=MAX_NUM_FIGURE)
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 1280 // (BATCH_SIZE // 4) // 2
+    checkpointing_steps = 16000 // (BATCH_SIZE // 4) // 2
     validation_steps = checkpointing_steps 
     num_train_epochs = 50
     
