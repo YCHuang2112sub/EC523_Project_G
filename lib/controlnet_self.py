@@ -283,8 +283,8 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                         # x = torch.cat([x1, x2], dim=2)
                         if(self.flag_first_pass == True):
                             # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
-                            TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
-                            transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                            TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1).cuda()
+                            transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2).cuda()
                             self.module_list_down_block_res_merging.append(transformer_dencoder)  
 
                         x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](tgt=x1, memory=x2)
@@ -298,8 +298,8 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                     dtype, device = mid_block_res_sample.dtype, mid_block_res_sample.device
                     if(self.flag_first_pass == True):
                         # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
-                        TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
-                        transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                        TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1).cuda()
+                        transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2).cuda()
                         self.module_list_mid_block_res_merging.append(transformer_dencoder)
                     x1, x2 = mid_block_res_sample.reshape(B, C, H*W), mid_sample.reshape(B, C, H*W)
                     # x = torch.cat([x1, x2], dim=2)
