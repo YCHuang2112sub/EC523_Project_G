@@ -623,6 +623,11 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
         unet.eval()
         controlnet.train()
 
+        # to device
+        controlnet = controlnet.to(accelerator.device, dtype=weight_dtype)
+        vae = vae.to(accelerator.device, dtype=weight_dtype)
+        unet = unet.to(accelerator.device, dtype=weight_dtype)
+        text_encoder = text_encoder.to(accelerator.device, dtype=weight_dtype)
 
         # Train!
         total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -690,18 +695,29 @@ def training_loop(args, controlnet, optimizer, lr_scheduler, \
                     noise = torch.randn_like(latents)
                     bsz = latents.shape[0]
                     # Sample a random timestep for each image
+                    # print(f"-------------------------{latents.device}")
                     timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
                     timesteps = timesteps.long()
 
                     # Add noise to the latents according to the noise magnitude at each timestep
                     # (this is the forward diffusion process)
                     noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
-
                     # Get the text embedding for conditioning
                     encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
 
                     controlnet_image_01 = batch["conditioning_pixel_values"].to(dtype=weight_dtype)
                     controlnet_image_02 = batch["conditioning_pixel_values_02"].to(dtype=weight_dtype)
+                    
+                    latents = latents.to(accelerator.device)
+                    noise = noise.to(accelerator.device)
+                    encoder_hidden_states = encoder_hidden_states.to(accelerator.device)
+                    controlnet_image_01 = controlnet_image_01.to(accelerator.device)
+                    controlnet_image_02 = controlnet_image_02.to(accelerator.device)
+                    
+                    print(f"ControlNet device: {next(controlnet.parameters()).device}")
+                    print(f"VAE device: {next(vae.parameters()).device}")
+                    print(f"UNet device: {next(unet.parameters()).device}")
+                    print(f"Text Encoder device: {next(text_encoder.parameters()).device}")
 
                     # assert to be multi-controlnet
                     assert isinstance(controlnet, MultiControlNetModel_SELF)
@@ -874,6 +890,8 @@ if __name__ == "__main__":
     args = parse_args(BATCH_SIZE, input_args = args_list)
     
     accelerator, logger, repo_id = get_logger_and_accelerator(args, logger)
+    # accelerator.device = torch.device("cuda:0")
+    # print(f"-------------------{accelerator.device}")
     
     tokenizer = get_tokenizer(args, accelerator)
     controlnet, unet = get_controlnet_unet(args, accelerator, HUGGING_FACE_CACHE_DIR, logger)
