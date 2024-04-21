@@ -862,16 +862,16 @@ if __name__ == "__main__":
     
     MAX_NUM_FIGURE=1
 
-    BATCH_SIZE = 12
+    BATCH_SIZE = 8
     DATSET_SHUFFLE = True
     
     data_path_dict, anime_figure_scene_dataset = anime_data.get_dataset(PHASE3_SCENE_DESCRIPTION_FILE, dataset_path=dataset_path, MAX_NUM_FIGURE=MAX_NUM_FIGURE)
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 1600 // (BATCH_SIZE // 4) // 2
+    checkpointing_steps = 16000 // (BATCH_SIZE // 4) // 2
     validation_steps = checkpointing_steps 
-    num_train_epochs = 50
+    num_train_epochs = 70
     
     args_list = get_args_list(BATCH_SIZE, num_train_epochs, checkpointing_steps, validation_steps)
     args = parse_args(BATCH_SIZE, input_args = args_list)
