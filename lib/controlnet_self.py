@@ -19,6 +19,7 @@ from torch import nn
 from torch.nn import functional as F
 
 import os
+from pathlib import Path
 
 
 # from ..configuration_utils import ConfigMixin, register_to_config
@@ -148,7 +149,7 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
             Provides additional conditioning to the unet during the denoising process. You must set multiple
             `ControlNetModel` as a list.
     """
-
+    # @register_to_config
     def __init__(self, controlnets: Union[List[ControlNetModel], Tuple[ControlNetModel]], controlnet_embedding_merging_mode):
         super().__init__(controlnets)
         # self.nets = nn.ModuleList(controlnets)
@@ -355,8 +356,10 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                 If specified, weights are saved in the format pytorch_model.<variant>.bin.
         """
         idx = 0
-        model_path_to_save = save_directory
-        for controlnet in self.nets:
+        model_path_to_save_base = save_directory
+        model_path_to_save = model_path_to_save_base
+        for controlnet in self.nets:            
+            print(f"model_path_to_save = {model_path_to_save}")
             controlnet.save_pretrained(
                 model_path_to_save,
                 is_main_process=is_main_process,
@@ -366,17 +369,36 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
             )
 
             idx += 1
-            model_path_to_save = model_path_to_save + f"_{idx}"
+            model_path_to_save = model_path_to_save_base + f"_{idx}"
 
-            if(self.controlnet_embedding_merging_mode != "Addition"):
-                for i, module in enumerate(self.module_list_down_block_res_merging):
-                    out_path = os.path.join(model_path_to_save, f"down_block_res_merging_{i}.pth")
-                    print(f"Saving down_block_res_merging_{i} to {out_path}")
-                    torch.save(module.state_dict(), out_path)
-                for i, module in enumerate(self.module_list_mid_block_res_merging):
-                    out_path = os.path.join(model_path_to_save, f"mid_block_res_merging_{i}.pth")
-                    print(f"Saving mid_block_res_merging_{i} to {out_path}")
-                    torch.save(module.state_dict(), out_path)
+        print(f"model_path_to_save @ MultiControlNet = {model_path_to_save_base}")
+
+        if(self.controlnet_embedding_merging_mode != "Addition"):
+            print(f"controlnet_embedding_merging_mode = {self.controlnet_embedding_merging_mode}")
+            out_path = os.path.join(model_path_to_save_base, f"down_blocks.pth")
+            out_path = Path(out_path)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            print(f"Saving down_blocks to {out_path}")
+            torch.save(self.module_list_down_block_res_merging, out_path)
+
+            out_path = os.path.join(model_path_to_save_base, f"mid_block.pth")
+            out_path = Path(out_path)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            print(f"Saving mid_block to {out_path}")
+            torch.save(self.module_list_mid_block_res_merging, out_path)
+
+            # for i, module in enumerate(self.module_list_down_block_res_merging):
+            #     out_path = os.path.join(model_path_to_save_base, f"down_block_res_merging_{i}.pth")
+            #     out_path = Path(out_path)
+            #     out_path.parent.mkdir(parents=True, exist_ok=True)
+            #     print(f"Saving down_block_res_merging_{i} to {out_path}")
+            #     torch.save(module.state_dict(), out_path)
+            # for i, module in enumerate(self.module_list_mid_block_res_merging):
+            #     out_path = os.path.join(model_path_to_save_base, f"mid_block_res_merging_{i}.pth")
+            #     out_path = Path(out_path)
+            #     out_path.parent.mkdir(parents=True, exist_ok=True)
+            #     print(f"Saving mid_block_res_merging_{i} to {out_path}")
+            #     torch.save(module.state_dict(), out_path)
 
     # @classmethod
     # def from_pretrained(cls, pretrained_model_path: Optional[Union[str, os.PathLike]], **kwargs):
@@ -448,6 +470,14 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
     #     #     for i, module in enumerate(self.module_list_mid_block_res_merging):
     #     #         torch.save(module.state_dict(), os.path.join(model_path_to_save, f"mid_block_res_merging_{i}.pth"))
 
+    #     model_path_to_save_base = pretrained_model_path
+    #     out_path = os.path.join(model_path_to_save_base, f"down_blocks.pth")
+    #     out_path = Path(out_path)
+    #     cls.module_list_down_block_res_merging = torch.load(out_path)
+
+    #     out_path = os.path.join(model_path_to_save_base, f"mid_block.pth")
+    #     out_path = Path(out_path)
+    #     cls.module_list_mid_block_res_merging = torch.load(out_path)
 
     #     logger.info(f"{len(controlnets)} controlnets loaded from {pretrained_model_path}.")
 
