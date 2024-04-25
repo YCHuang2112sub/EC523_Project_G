@@ -146,9 +146,14 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
             `ControlNetModel` as a list.
     """
 
-    def __init__(self, controlnets: Union[List[ControlNetModel], Tuple[ControlNetModel]]):
+    def __init__(self, controlnets: Union[List[ControlNetModel], Tuple[ControlNetModel]], controlnet_embedding_merging_mode):
         super().__init__(controlnets)
         # self.nets = nn.ModuleList(controlnets)
+        assert(controlnet_embedding_merging_mode is not None)
+        self.controlnet_embedding_merging_mode = controlnet_embedding_merging_mode # Addition, Concatenation_01, Concatenation_02, Attention 
+        self.flag_first_pass = True
+        self.module_list_down_block_res_merging = nn.ModuleList()
+        self.module_list_mid_block_res_merging = nn.ModuleList()
 
     def forward(
         self,
@@ -182,14 +187,130 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
             )
 
             # merge samples by adding them
-            if i == 0:
-                down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
+            if(self.controlnet_embedding_merging_mode == "Addition"):
+                if i == 0:
+                    down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
+                else:
+                    down_block_res_samples = [
+                        samples_prev + samples_curr
+                        for samples_prev, samples_curr in zip(down_block_res_samples, down_samples)
+                    ]
+                    mid_block_res_sample += mid_sample
+            elif(self.controlnet_embedding_merging_mode == "Concatenation_01"):
+                if i == 0:
+                    down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
+                else:
+                    # down_block_res_samples = [
+                    #     torch.cat([samples_prev, samples_curr], dim=1)
+                    #     for samples_prev, samples_curr in zip(down_block_res_samples, down_samples)
+                    # ]
+                    # print(f"samples_prev.shape: {mid_block_res_sample.shape}, samples_curr.shape: {mid_sample.shape}")
+                    down_block_res_samples_next = []
+                    for i_down_block, (samples_prev, samples_curr) in enumerate(zip(down_block_res_samples, down_samples)):
+                        assert(samples_prev.shape == samples_curr.shape)
+                        B, C, H, W = samples_prev.shape
+                        dtype, device = samples_prev.dtype, samples_prev.device
+                        x = torch.cat([samples_prev, samples_curr], dim=1)
+                        if(self.flag_first_pass == True):
+                            conv2d = torch.nn.Conv2d(kernel_size=1, in_channels=C*2, out_channels=C, stride=1, padding=0)
+                            conv2d = conv2d.to(device=device, dtype=dtype)
+                            self.module_list_down_block_res_merging.append(conv2d)  
+
+                        x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](x)
+                        down_block_res_samples_next.append(x)
+                    down_block_res_samples = down_block_res_samples_next
+
+                    # mid_block_res_sample = torch.cat([mid_block_res_sample, mid_sample], dim=1)
+                    assert(mid_block_res_sample.shape == mid_sample.shape)
+                    B,C,H,W = mid_block_res_sample.shape
+                    dtype, device = mid_block_res_sample.dtype, mid_block_res_sample.device
+                    if(self.flag_first_pass == True):
+                        conv2d = torch.nn.Conv2d(kernel_size=1, in_channels=C*2, out_channels=C, stride=1, padding=0)
+                        conv2d = conv2d.to(device=device, dtype=dtype)
+                        self.module_list_mid_block_res_merging.append(conv2d)
+                    x = torch.cat([mid_block_res_sample, mid_sample], dim=1)
+                    x = self.module_list_mid_block_res_merging[i-1](x)
+                    mid_block_res_sample = x
+
+            elif(self.controlnet_embedding_merging_mode == "Concatenation_02"):
+                if i == 0:
+                    down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
+                else:
+                    # down_block_res_samples = [
+                    #     torch.cat([samples_prev, samples_curr], dim=1)
+                    #     for samples_prev, samples_curr in zip(down_block_res_samples, down_samples)
+                    # ]
+                    # print(f"samples_prev.shape: {mid_block_res_sample.shape}, samples_curr.shape: {mid_sample.shape}")
+                    down_block_res_samples_next = []
+                    for i_down_block, (samples_prev, samples_curr) in enumerate(zip(down_block_res_samples, down_samples)):
+                        assert(samples_prev.shape == samples_curr.shape)
+                        B, C, H, W = samples_prev.shape
+                        dtype, device = samples_prev.dtype, samples_prev.device
+                        x1, x2 = samples_prev.reshape(B, C, H*W), samples_curr.reshape(B, C, H*W)
+                        x = torch.cat([x1, x2], dim=2)
+                        if(self.flag_first_pass == True):
+                            linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
+                            self.module_list_down_block_res_merging.append(linear)  
+
+                        x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](x)
+                        x = x.reshape(B, C, H, W)
+                        down_block_res_samples_next.append(x)
+                    down_block_res_samples = down_block_res_samples_next
+
+                    # mid_block_res_sample = torch.cat([mid_block_res_sample, mid_sample], dim=1)
+                    assert(mid_block_res_sample.shape == mid_sample.shape)
+                    B,C,H,W = mid_block_res_sample.shape
+                    dtype, device = mid_block_res_sample.dtype, mid_block_res_sample.device
+                    if(self.flag_first_pass == True):
+                        linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
+                        self.module_list_mid_block_res_merging.append(linear)
+                    x1, x2 = mid_block_res_sample.reshape(B, C, H*W), mid_sample.reshape(B, C, H*W)
+                    x = torch.cat([x1, x2], dim=2)
+                    x = self.module_list_mid_block_res_merging[i-1](x)
+                    x = x.reshape(B, C, H, W)
+                    mid_block_res_sample = x
+
+            elif(self.controlnet_embedding_merging_mode == "Attention"):
+                if i == 0:
+                    down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
+                else:
+                    down_block_res_samples_next = []
+                    for i_down_block, (samples_prev, samples_curr) in enumerate(zip(down_block_res_samples, down_samples)):
+                        assert(samples_prev.shape == samples_curr.shape)
+                        B, C, H, W = samples_prev.shape
+                        dtype, device = samples_prev.dtype, samples_prev.device
+                        x1, x2 = samples_prev.reshape(B, C, H*W), samples_curr.reshape(B, C, H*W)
+                        # x = torch.cat([x1, x2], dim=2)
+                        if(self.flag_first_pass == True):
+                            # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
+                            TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
+                            transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                            self.module_list_down_block_res_merging.append(transformer_dencoder)  
+
+                        x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](tgt=x1, memory=x2)
+                        x = x.reshape(B, C, H, W)
+                        down_block_res_samples_next.append(x)
+                    down_block_res_samples = down_block_res_samples_next
+
+                    # mid_block_res_sample = torch.cat([mid_block_res_sample, mid_sample], dim=1)
+                    assert(mid_block_res_sample.shape == mid_sample.shape)
+                    B,C,H,W = mid_block_res_sample.shape
+                    dtype, device = mid_block_res_sample.dtype, mid_block_res_sample.device
+                    if(self.flag_first_pass == True):
+                        # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
+                        TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
+                        transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                        self.module_list_mid_block_res_merging.append(transformer_dencoder)
+                    x1, x2 = mid_block_res_sample.reshape(B, C, H*W), mid_sample.reshape(B, C, H*W)
+                    # x = torch.cat([x1, x2], dim=2)
+                    x = self.module_list_mid_block_res_merging[i-1](tgt=x1, memory=x2)
+                    x = x.reshape(B, C, H, W)
+                    mid_block_res_sample = x
             else:
-                down_block_res_samples = [
-                    samples_prev + samples_curr
-                    for samples_prev, samples_curr in zip(down_block_res_samples, down_samples)
-                ]
-                mid_block_res_sample += mid_sample
+                raise ValueError(f"controlnet_embedding_merging_mode: {self.controlnet_embedding_merging_mode} "
+                                 f"must be Addition, Concatenation_01, Concatenation_02, or Attention.")
+
+        self.flag_first_pass = False
 
         return down_block_res_samples, mid_block_res_sample
 

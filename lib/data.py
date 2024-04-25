@@ -56,9 +56,8 @@ class FigureSceneDataset(Dataset):
         assert len(scene_path_list) == len(description_list)
         
         x = zip(scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list)
-        # xt = [[scene, inpainting, figure, description] for scene, inpainting, figure, description in x  
-        #                                                 if len(figure) <= MAX_NUM_FIGURE]
-        xt = x
+        xt = [[scene, inpainting, figure, description] for scene, inpainting, figure, description in x  
+                                                        if len(figure) <= MAX_NUM_FIGURE]
         scene_path_list, inpainting_image_path_list, fiugre_path_list, description_list = zip(*xt)
 
         self.data = {"scene_path_list": scene_path_list, 
@@ -113,21 +112,12 @@ class FigureSceneDataset(Dataset):
     
     def get_figure_img_from_path(self, figure_path_list):
         figure_img_list = np.zeros((self.MAX_NUM_FIGURE, 3, 256, 256))
-        mask_img_list = np.zeros((self.MAX_NUM_FIGURE, 256, 256), dtype=bool)
         len_figure = min(len(figure_path_list), self.MAX_NUM_FIGURE)
         for i_figure, path in enumerate(figure_path_list):
-            # figure_img_path = path["img_path"].replace("mask_", "")
-            figure_img_path = path["img_path"]
+            figure_img_path = path["img_path"].replace("mask_", "")
             figure_img = Image.open(Path(self.dataset_path) / figure_img_path)
             figure_img = figure_img.convert("RGB")
             figure_img = np.array(figure_img).transpose(2, 0, 1)
-
-            mask_img_path = path["mask_path"]
-            mask_img = Image.open(Path(self.dataset_path) / mask_img_path)
-            mask_img = mask_img.convert("L")
-            mask_img = mask_img.resize((256, 256))
-            mask_img = np.array(mask_img)
-            mask_img = mask_img > 100
 
             if self.figure_transform_flag == True:
                 figure_transform = torchvision.transforms.Compose([
@@ -139,18 +129,14 @@ class FigureSceneDataset(Dataset):
 
             figure_img = _random_pad_to_size(figure_img, size=(256, 256), transform=figure_transform)
             figure_img_list[i_figure] = figure_img / 255.0 - 0.5
-
-            mask_img_list[i_figure] = mask_img
-
-            if (i_figure+1) == len_figure:
-                break
-            
-        return figure_img_list, len_figure, mask_img_list
+            # if (i_figure+1) == len_figure:
+            #     break
+        return figure_img_list, len_figure
     
-    def get_description(self, description_list):
+    def get_description(self, description_list, prefix=""):
         len_descriptions = len(description_list)
         i = np.random.randint(0, len_descriptions)
-        description = description_list[i]["description"].split("ASSISTANT:")[1]
+        description = prefix + description_list[i]["description"].split("ASSISTANT:")[1]
         return description
     
     def __getitem__(self, idx):
@@ -170,25 +156,8 @@ class FigureSceneDataset(Dataset):
 
         sampled_data["scene_img"] = self.get_scene_img_from_path(sampled_data["scene_path_list"])
         sampled_data["inpainting_img"] = self.get_inpainting_img_from_path(sampled_data["inpainting_image_path_list"])
-        sampled_data["figure_img_list"], sampled_data["len_figure"], sampled_data["mask_img_list"] = self.get_figure_img_from_path(sampled_data["figure_path_list"])
-        sampled_data["description"] = self.get_description(sampled_data["description_list"])
-
-        # leave one out inpainting image start
-        scene = sampled_data["scene_img"]
-        background = sampled_data["inpainting_img"]
-        i_figure = np.random.randint(0, sampled_data["len_figure"])
-        figure = sampled_data["figure_img_list"][i_figure]
-        mask = sampled_data["mask_img_list"][i_figure]
-        from copy import deepcopy
-        left_one_out_background_img = deepcopy(scene)
-        left_one_out_background_img[:,mask] = background[:,mask]
-        sampled_data["inpainting_img"] = left_one_out_background_img
-        sampled_data["figure_img_list"] = figure[np.newaxis, :, :, :]
-        sampled_data["mask_img_list"] = mask[np.newaxis, :, :]
-        sampled_data["len_figure"] = 1
-        assert(len(sampled_data["figure_img_list"].shape) == 4 
-               and len(sampled_data["mask_img_list"].shape) == 3)
-        # leave one out inpainting image end
+        sampled_data["figure_img_list"], sampled_data["len_figure"] = self.get_figure_img_from_path(sampled_data["figure_path_list"])
+        sampled_data["description"] = self.get_description(sampled_data["description_list"], prefix="This is an Japanese Anime style image. ")
 
         sampled_data.pop("scene_path_list")
         sampled_data.pop("inpainting_image_path_list")
