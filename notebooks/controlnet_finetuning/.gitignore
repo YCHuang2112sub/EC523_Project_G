@@ -6,3 +6,9 @@ wandb
 cache/*
 model_out*/*
 wandb/*
+
+*.zip
+model*
+checkpoint*
+concate*
+atten*

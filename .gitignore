@@ -1,4 +1,5 @@
 #
-# DATASET
+DATASET
 DATASET/*
 diffusion*
+*.zip

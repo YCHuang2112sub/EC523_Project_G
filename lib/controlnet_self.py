@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+import os
+
 
 # from ..configuration_utils import ConfigMixin, register_to_config
 # from ..loaders import FromOriginalControlNetMixin
@@ -280,14 +283,18 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                         B, C, H, W = samples_prev.shape
                         dtype, device = samples_prev.dtype, samples_prev.device
                         x1, x2 = samples_prev.reshape(B, C, H*W), samples_curr.reshape(B, C, H*W)
+                        x1, x2 = x1.permute(0, 2, 1), x2.permute(0, 2, 1)
                         # x = torch.cat([x1, x2], dim=2)
                         if(self.flag_first_pass == True):
                             # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
-                            TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
-                            transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                            TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=C, nhead=1, batch_first=True) \
+                                                                                .to(x1.device, x1.dtype)
+                            transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2) \
+                                                                                .to(x1.device, x1.dtype)
                             self.module_list_down_block_res_merging.append(transformer_dencoder)  
 
                         x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](tgt=x1, memory=x2)
+                        x = x.permute(0, 2, 1)
                         x = x.reshape(B, C, H, W)
                         down_block_res_samples_next.append(x)
                     down_block_res_samples = down_block_res_samples_next
@@ -298,12 +305,16 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                     dtype, device = mid_block_res_sample.dtype, mid_block_res_sample.device
                     if(self.flag_first_pass == True):
                         # linear = torch.nn.Linear(in_features=H*W*2, out_features=H*W).to(device=device, dtype=dtype)
-                        TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=H*W, nhead=1)
-                        transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2)
+                        TransformerDecoderLayer = torch.nn.TransformerDecoderLayer(d_model=C, nhead=1, batch_first=True) \
+                                                                    .to(mid_block_res_sample.device, mid_block_res_sample.dtype)
+                        transformer_dencoder = torch.nn.TransformerDecoder(TransformerDecoderLayer, num_layers=2) \
+                                                                    .to(mid_block_res_sample.device, mid_block_res_sample.dtype)
                         self.module_list_mid_block_res_merging.append(transformer_dencoder)
                     x1, x2 = mid_block_res_sample.reshape(B, C, H*W), mid_sample.reshape(B, C, H*W)
+                    x1, x2 = x1.permute(0, 2, 1), x2.permute(0, 2, 1)
                     # x = torch.cat([x1, x2], dim=2)
                     x = self.module_list_mid_block_res_merging[i-1](tgt=x1, memory=x2)
+                    x = x.permute(0, 2, 1)
                     x = x.reshape(B, C, H, W)
                     mid_block_res_sample = x
             else:
@@ -314,47 +325,58 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
 
         return down_block_res_samples, mid_block_res_sample
 
-    # def save_pretrained(
-    #     self,
-    #     save_directory: Union[str, os.PathLike],
-    #     is_main_process: bool = True,
-    #     save_function: Callable = None,
-    #     safe_serialization: bool = True,
-    #     variant: Optional[str] = None,
-    # ):
-    #     """
-    #     Save a model and its configuration file to a directory, so that it can be re-loaded using the
-    #     `[`~pipelines.controlnet.MultiControlNetModel.from_pretrained`]` class method.
 
-    #     Arguments:
-    #         save_directory (`str` or `os.PathLike`):
-    #             Directory to which to save. Will be created if it doesn't exist.
-    #         is_main_process (`bool`, *optional*, defaults to `True`):
-    #             Whether the process calling this is the main process or not. Useful when in distributed training like
-    #             TPUs and need to call this function on all processes. In this case, set `is_main_process=True` only on
-    #             the main process to avoid race conditions.
-    #         save_function (`Callable`):
-    #             The function to use to save the state dictionary. Useful on distributed training like TPUs when one
-    #             need to replace `torch.save` by another method. Can be configured with the environment variable
-    #             `DIFFUSERS_SAVE_MODE`.
-    #         safe_serialization (`bool`, *optional*, defaults to `True`):
-    #             Whether to save the model using `safetensors` or the traditional PyTorch way (that uses `pickle`).
-    #         variant (`str`, *optional*):
-    #             If specified, weights are saved in the format pytorch_model.<variant>.bin.
-    #     """
-    #     idx = 0
-    #     model_path_to_save = save_directory
-    #     for controlnet in self.nets:
-    #         controlnet.save_pretrained(
-    #             model_path_to_save,
-    #             is_main_process=is_main_process,
-    #             save_function=save_function,
-    #             safe_serialization=safe_serialization,
-    #             variant=variant,
-    #         )
+    def save_pretrained(
+        self,
+        save_directory: Union[str, os.PathLike],
+        is_main_process: bool = True,
+        save_function: Callable = None,
+        safe_serialization: bool = True,
+        variant: Optional[str] = None,
+    ):
+        """
+        Save a model and its configuration file to a directory, so that it can be re-loaded using the
+        `[`~pipelines.controlnet.MultiControlNetModel.from_pretrained`]` class method.
 
-    #         idx += 1
-    #         model_path_to_save = model_path_to_save + f"_{idx}"
+        Arguments:
+            save_directory (`str` or `os.PathLike`):
+                Directory to which to save. Will be created if it doesn't exist.
+            is_main_process (`bool`, *optional*, defaults to `True`):
+                Whether the process calling this is the main process or not. Useful when in distributed training like
+                TPUs and need to call this function on all processes. In this case, set `is_main_process=True` only on
+                the main process to avoid race conditions.
+            save_function (`Callable`):
+                The function to use to save the state dictionary. Useful on distributed training like TPUs when one
+                need to replace `torch.save` by another method. Can be configured with the environment variable
+                `DIFFUSERS_SAVE_MODE`.
+            safe_serialization (`bool`, *optional*, defaults to `True`):
+                Whether to save the model using `safetensors` or the traditional PyTorch way (that uses `pickle`).
+            variant (`str`, *optional*):
+                If specified, weights are saved in the format pytorch_model.<variant>.bin.
+        """
+        idx = 0
+        model_path_to_save = save_directory
+        for controlnet in self.nets:
+            controlnet.save_pretrained(
+                model_path_to_save,
+                is_main_process=is_main_process,
+                save_function=save_function,
+                safe_serialization=safe_serialization,
+                variant=variant,
+            )
+
+            idx += 1
+            model_path_to_save = model_path_to_save + f"_{idx}"
+
+            if(self.controlnet_embedding_merging_mode != "Addition"):
+                for i, module in enumerate(self.module_list_down_block_res_merging):
+                    out_path = os.path.join(model_path_to_save, f"down_block_res_merging_{i}.pth")
+                    print(f"Saving down_block_res_merging_{i} to {out_path}")
+                    torch.save(module.state_dict(), out_path)
+                for i, module in enumerate(self.module_list_mid_block_res_merging):
+                    out_path = os.path.join(model_path_to_save, f"mid_block_res_merging_{i}.pth")
+                    print(f"Saving mid_block_res_merging_{i} to {out_path}")
+                    torch.save(module.state_dict(), out_path)
 
     # @classmethod
     # def from_pretrained(cls, pretrained_model_path: Optional[Union[str, os.PathLike]], **kwargs):
@@ -418,6 +440,14 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
 
     #         idx += 1
     #         model_path_to_load = pretrained_model_path + f"_{idx}"
+
+        
+    #     # if(self.controlnet_embedding_merging_mode != "Addition"):
+    #     #     for i, module in enumerate(self.module_list_down_block_res_merging):
+    #     #         torch.save(module.state_dict(), os.path.join(model_path_to_save, f"down_block_res_merging_{i}.pth"))
+    #     #     for i, module in enumerate(self.module_list_mid_block_res_merging):
+    #     #         torch.save(module.state_dict(), os.path.join(model_path_to_save, f"mid_block_res_merging_{i}.pth"))
+
 
     #     logger.info(f"{len(controlnets)} controlnets loaded from {pretrained_model_path}.")
 
