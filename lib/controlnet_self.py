@@ -190,6 +190,10 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                 return_dict=return_dict,
             )
 
+            # for i_ds, ds in enumerate(down_samples):
+            #     print(f"down_samples[{i_ds}].shape = {ds.shape}")
+            # print(f"mid_sample.shape = {mid_sample.shape}")
+
             # merge samples by adding them
             if(self.controlnet_embedding_merging_mode == "Addition"):
                 if i == 0:
@@ -210,9 +214,14 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                     # ]
                     # print(f"samples_prev.shape: {mid_block_res_sample.shape}, samples_curr.shape: {mid_sample.shape}")
                     down_block_res_samples_next = []
+
+                    # for i_db, db in enumerate(self.module_list_down_block_res_merging):
+                    #     print(f"self.module_list_down_block_res_merging[{i_db}] = {db}")
+
                     for i_down_block, (samples_prev, samples_curr) in enumerate(zip(down_block_res_samples, down_samples)):
                         assert(samples_prev.shape == samples_curr.shape)
                         B, C, H, W = samples_prev.shape
+                        # print(f"B,C,H,W = {B,C,H,W}")
                         dtype, device = samples_prev.dtype, samples_prev.device
                         x = torch.cat([samples_prev, samples_curr], dim=1)
                         if(self.flag_first_pass == True):
@@ -220,9 +229,13 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
                             conv2d = conv2d.to(device=device, dtype=dtype)
                             self.module_list_down_block_res_merging.append(conv2d)  
 
-                        x = self.module_list_down_block_res_merging[(i-1)*len(down_samples) + i_down_block](x)
+                        i_db_res = (i-1)*len(down_samples) + i_down_block
+                        # print(f"i_db_res = {i_db_res}")
+                        # print(f"self.module_list_down_block_res_merging[{i_db_res}] = {self.module_list_down_block_res_merging[i_db_res]}")
+                        x = self.module_list_down_block_res_merging[i_db_res](x)
                         down_block_res_samples_next.append(x)
                     down_block_res_samples = down_block_res_samples_next
+
 
                     # mid_block_res_sample = torch.cat([mid_block_res_sample, mid_sample], dim=1)
                     assert(mid_block_res_sample.shape == mid_sample.shape)
@@ -371,30 +384,38 @@ class MultiControlNetModel_SELF(MultiControlNetModel):
             idx += 1
             model_path_to_save = model_path_to_save_base + f"_{idx}"
 
-        print(f"model_path_to_save @ MultiControlNet = {model_path_to_save_base}")
+        model_path_to_save_multi_merge = model_path_to_save_base + f"_multi_merge"
+        print(f"model_path_to_save @ MultiControlNet = {model_path_to_save_multi_merge}")
 
         if(self.controlnet_embedding_merging_mode != "Addition"):
             print(f"controlnet_embedding_merging_mode = {self.controlnet_embedding_merging_mode}")
-            out_path = os.path.join(model_path_to_save_base, f"down_blocks.pth")
+            out_path = os.path.join(model_path_to_save_multi_merge, f"down_blocks.pth")
             out_path = Path(out_path)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving down_blocks to {out_path}")
             torch.save(self.module_list_down_block_res_merging, out_path)
+            # print(f"@save_pretrained self.module_list_down_block_res_merging = {self.module_list_down_block_res_merging}")
+            # temp_load = torch.load(out_path)
+            # print(f"@save_pretrained temp_load = {temp_load}")
 
-            out_path = os.path.join(model_path_to_save_base, f"mid_block.pth")
+            out_path = os.path.join(model_path_to_save_multi_merge, f"mid_block.pth")
             out_path = Path(out_path)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving mid_block to {out_path}")
             torch.save(self.module_list_mid_block_res_merging, out_path)
 
+            out_path = os.path.join(model_path_to_save_multi_merge, f"controlnet_embedding_merging_mode.txt")
+            print(f"Save controlnet_embedding_merging_mode to {out_path}")
+            with open(out_path, 'w') as f:
+                f.write(self.controlnet_embedding_merging_mode)
             # for i, module in enumerate(self.module_list_down_block_res_merging):
-            #     out_path = os.path.join(model_path_to_save_base, f"down_block_res_merging_{i}.pth")
+            #     out_path = os.path.join(model_path_to_save_multi_merge, f"down_block_res_merging_{i}.pth")
             #     out_path = Path(out_path)
             #     out_path.parent.mkdir(parents=True, exist_ok=True)
             #     print(f"Saving down_block_res_merging_{i} to {out_path}")
             #     torch.save(module.state_dict(), out_path)
             # for i, module in enumerate(self.module_list_mid_block_res_merging):
-            #     out_path = os.path.join(model_path_to_save_base, f"mid_block_res_merging_{i}.pth")
+            #     out_path = os.path.join(model_path_to_save_multi_merge, f"mid_block_res_merging_{i}.pth")
             #     out_path = Path(out_path)
             #     out_path.parent.mkdir(parents=True, exist_ok=True)
             #     print(f"Saving mid_block_res_merging_{i} to {out_path}")
