@@ -2,3 +2,10 @@
 # DATASET
 DATASET/*
 diffusion*
+
+src/wandb/*
+src/model_out/*
+src/model_out_1/*
+src/cache/*
+src/__pycache__/*
+src/output_image
