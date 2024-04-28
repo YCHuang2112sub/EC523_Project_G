@@ -884,9 +884,9 @@ if __name__ == "__main__":
     
     logger = get_logger(__name__)
     
-    checkpointing_steps = 16000 // (BATCH_SIZE // 4) // 2
-    validation_steps = checkpointing_steps 
-    num_train_epochs = 50
+    checkpointing_steps = 32000 // (BATCH_SIZE // 4) // 2
+    validation_steps = checkpointing_steps
+    num_train_epochs = 200
     
     args_list = get_args_list(BATCH_SIZE, num_train_epochs, checkpointing_steps, validation_steps)
     args = parse_args(BATCH_SIZE, input_args = args_list)

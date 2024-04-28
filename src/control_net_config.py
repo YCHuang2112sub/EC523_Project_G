@@ -749,7 +749,7 @@ def get_args_list(BATCH_SIZE, num_train_epochs, checkpointing_steps, validation_
         
         "--num_validation_images", "20", \
         "--has_eval_result_output_to_terminal", 0,  #"True" or 0 \ 
-        "--controlnet_embedding_merging_mode", "Attention", 
+        "--controlnet_embedding_merging_mode", "Addition", 
         #Addition, Concatenation_01, Concatenation_02, Attention 
         ]
     return args_list
