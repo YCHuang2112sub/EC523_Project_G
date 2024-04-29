@@ -1,0 +1,8 @@
+cache
+model_out
+model_out_*
+wandb
+
+cache/*
+model_out*/*
+wandb/*
