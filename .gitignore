@@ -1,4 +1,11 @@
 #
-DATASET*
+# DATASET
 DATASET/*
 diffusion*
+
+src_controlnet/wandb/*
+src_controlnet/model_out/*
+src_controlnet/model_out_1/*
+src_controlnet/cache/*
+src_controlnet/__pycache__/*
+src_controlnet/output_image/*
