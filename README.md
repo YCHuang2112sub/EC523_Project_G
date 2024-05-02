@@ -190,14 +190,15 @@ The leftmost images are the background; the middle left images are the figures; 
 
 ## Evaluation  😎
 
-In the file Evaluation/evaluation_gallery.ipynb, we showcase the results of testing our selected pre-trained models on several samples to demonstrate their robust performance. Specifically, when a high similarity score is anticipated, we confirm that the resulting score indeed meets this expectation.
+In the file `Evaluation/evaluation_gallery.ipynb`, we showcase the results of testing our selected pre-trained models on several samples to demonstrate their robust performance. Specifically, when a high similarity score is anticipated, we confirm that the resulting score indeed meets this expectation.
 
 We conducted our evaluation across three dimensions using three selected pre-trained models. The ResNet 50 model evaluates the cosine similarity score between the generated image and the ground truth image. The CLIP model assesses the similarity score between the generated image and the input prompt. Lastly, the InceptionV3 model functions as a classifier to evaluate the recognizability of the generated images themselves.
 
 In the file Evaluation/baseline.ipynb, we have developed our evaluation pipeline for the baseline inference method. This pipeline utilizes three pre-trained models to evaluate outputs stored in Google Drive. Users can modify the paths to the folders containing generated images, ground truth images, and corresponding text files as follows:
 
 ```
-generated_dir = '/content/drive/My Drive/523_pipeline/output_image/generated'                ground_truth_dir='/content/drive/MyDrive/523_pipeline/output_image/ground_truth'   
+generated_dir = '/content/drive/My Drive/523_pipeline/output_image/generated'
+ground_truth_dir='/content/drive/MyDrive/523_pipeline/output_image/ground_truth'   
 text_dir = '/content/drive/My Drive/523_pipeline/output_image/text'
 ```
 
@@ -205,8 +206,8 @@ The number of images in the generated image folder can also be adjusted. For exa
 
 ```
 for i in range(302): 
-    text_path = os.path.join(text_dir, f'text_progress_{i}.txt') 
-    gen_img_path = os.path.join(generated_dir, f'generated_progress_{i}.png')
+-  text_path = os.path.join(text_dir, f'text_progress_{i}.txt') 
+-  gen_img_path = os.path.join(generated_dir, f'generated_progress_{i}.png')
 ```
 
 Both the generated and ground truth directories contain 256x256 PNG images. The text directory houses multiple TXT files, each associated with a set of generated and ground truth images.
@@ -215,13 +216,13 @@ This flexible pipeline can be rerun with any number of output datasets of PNG im
 
 Building on the existing features and functionalities, we are expanding our evaluation framework to include additional pipelines for each type of generated result:
 
-In Evaluation/GAN.ipynb, we introduce a pipeline dedicated to evaluating results produced by the StyleGAN method.
+In `Evaluation/GAN.ipynb`, we introduce a pipeline dedicated to evaluating results produced by the StyleGAN method.
 
-In Evaluation/ControlNet_attention.ipynb, we introduce a pipeline dedicated to evaluating results produced by the ControlNet method cross attention version.
+In `Evaluation/ControlNet_attention.ipynb`, we introduce a pipeline dedicated to evaluating results produced by the ControlNet method cross attention version.
 
-In Evaluation/output_image_64000_addition.ipynb, we introduce a pipeline dedicated to evaluating results produced by the ControlNet method addition version.
+In `Evaluation/output_image_64000_addition.ipynb`, we introduce a pipeline dedicated to evaluating results produced by the ControlNet method addition version.
 
-In Evaluation/concatenation.ipynb, we introduce a pipeline dedicated to evaluating results produced by the Inference method concatenation version.
+In `Evaluation/concatenation.ipynb`, we introduce a pipeline dedicated to evaluating results produced by the Inference method concatenation version.
 
 ## Credits
 
