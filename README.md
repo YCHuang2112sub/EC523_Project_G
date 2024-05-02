@@ -16,6 +16,70 @@ module load tensorflow
 source env/bin/activate
 pip install -r requirements.txt
 ```
+
+## Structure in the repository:
+```
+|-- Evaluation                               #Evaluation Pipeline
+|   |-- ControlNet_attention.ipynb
+|   |-- GAN.ipynb
+|   |-- baseline.ipynb
+|   |-- concatenation.ipynb
+|   |-- evaluation_gallery.ipynb
+|   `-- output_image_64000_addition.ipynb
+|-- README.md
+|-- lib
+|   |-- __init__.py
+|   |-- controlnet_self.py
+|   |-- data.py
+|   `-- utils.py
+|-- notebooks                                 #Reference
+|   |-- clip+diffusion.ipynb
+|   |-- controlnet_finetuning
+|   |   `-- test_training_ControlNet.ipynb
+|   |-- dataloader_guide.ipynb
+|   |-- in_painting_with_stable_diffusion_using_diffusers.ipynb
+|   |-- revise_processing_record_content.ipynb
+|   |-- test_leave_one_out.ipynb
+|   |-- test_load_data.ipynb
+|   `-- unclip.ipynb
+|
+|-- requirements.txt
+|-- src_GAN        				#Implementation For GAN
+|   |-- configs
+|   |   |-- StyleGAN2.json
+|   |   `-- StyleGAN_256.json
+|   |-- job.sh
+|   |-- losses.py
+|   |-- models
+|   |   |-- StyleGAN.py
+|   |   `-- StyleGAN2.py
+|   |-- start.py
+|   |-- train_new_gan.py
+|   |-- trainer.py
+|   |-- training_gan.ipynb
+|   `-- utils
+|       |-- images.py
+|       |-- register.py
+|       |-- video.py
+|       `-- weights.py
+|-- src_controlnet				 #Implementation For ControlNet
+|   |-- __init__.py
+|   |-- control_net_OOD_evaluation.ipynb
+|   |-- control_net_config.py
+|   |-- control_net_evaluation.ipynb
+|   |-- control_net_train.py
+|   |-- data.py
+|   |-- test_path.py
+|   `-- utils.py
+`-- src_inference            			 #Inference Code
+    |
+    |-- inference_loop.py
+    |-- test.ipynb
+    `-- utils.py
+```
+
+
+
 ## WandB setup
 [https://docs.wandb.ai/](WandB) is used for our projects. WandB provides stores training data online so it can be used easily to monitor all training tasks.
 
