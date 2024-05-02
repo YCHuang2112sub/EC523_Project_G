@@ -24,8 +24,8 @@ To create an account go to the wandb website and install through `pip install wa
 ## Inference
 All code for baseline method implementation can be found here `/EC523_Project_G/src_inference`
 To train simply run  `python3 inference_loop.py`. For training with different configuration you should modify source code in 199 lines in inference_loop.py model_config.update() and following codes
-
-`model_config.update({
+```
+model_config.update({
         'attention_resolutions': '32, 16, 8',
         'class_cond': False,
         'diffusion_steps': 1000,
@@ -59,8 +59,8 @@ To train simply run  `python3 inference_loop.py`. For training with different co
         'skip_timesteps': skip_timesteps,
         'init_scale': init_scale,
         'mse_guidance_scale': mse_guidance_scale
-    })`
-
+    })
+```
 ## GAN-training
 All code for GAN implementation can be found here `/EC523_Project_G/src_GAN`
 To train simply run  `python3 train_new_gan.py`. For training with different configuration and model simply modify the following line  in train_new_gan.py
@@ -75,6 +75,7 @@ For debugging purposes we also provided a ipynb file you can find it here `/EC52
 
 
 We also support using scc resources for training GAN model. If you would like to train using scc's GPU simply submit job by running `/EC523_Project_G/notebooks/src_GAN/qsub job.sh`. 
+
 ##Evaluation
 
 
