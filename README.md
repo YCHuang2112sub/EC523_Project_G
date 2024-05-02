@@ -20,7 +20,7 @@ pip install -r requirements.txt
 To create an account go to the wandb website and install through `pip install wandb` (or `pip install -r requirements.txt` ).
 
 
-## Control-Net ╭(●｀∀´●)╯╰(●’◡’●)╮ (●’◡’●)ﾉ ヾ(*´▽‘*)ﾉ
+## Control-Net ヾ(*´▽‘*)ﾉ
 All code for Controlnet implementation can be found here /EC523_Project_G/src_controlnet. To train, simply run python3 control_net_train.py. For training with different configurations,
  please modify the function def get_args_list() in control_net_config.py 
 ```
