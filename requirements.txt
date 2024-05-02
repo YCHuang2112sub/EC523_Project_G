@@ -18,3 +18,10 @@ torchsummary==1.5.1
 torchvision==0.15.2
 transformers==4.40.0
 wandb==0.16.6
+ipython
+lpips
+pillow
+git+https://github.com/openai/CLIP.git
+git+https://github.com/openai/guided-diffusion.git
+pathlib
+importlib
