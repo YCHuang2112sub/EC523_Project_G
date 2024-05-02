@@ -195,3 +195,5 @@ The leftmost images are the background; the middle left images are the figures; 
 ## Credits
 
 This training code for GAN method was created based on `https://github.com/maximkm/StyleGAN-anime`. We would like to thank Maxim Nikolaev for making the code for GAN models publicly available. If you use would like to use the code in this repository, please cite the original repository.
+
+This training code for Baseline method was created based on `https://github.com/openai/guided-diffusion` and `https://github.com/crowsonkb/clip-guided-diffusion`. We would like to thank crowsonkb for making the code for Clip Gudied Diffusion publicly available. If you use would like to use the code in this repository, please cite the original repository.
