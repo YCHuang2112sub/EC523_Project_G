@@ -76,7 +76,7 @@ For debugging purposes we also provided a ipynb file you can find it here `/EC52
 
 We also support using scc resources for training GAN model. If you would like to train using scc's GPU simply submit job by running `/EC523_Project_G/notebooks/src_GAN/qsub job.sh`. 
 
-##Evaluation
+## Evaluation
 
 
 ## Credits
