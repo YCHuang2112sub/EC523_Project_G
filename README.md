@@ -84,7 +84,7 @@ pip install -r requirements.txt
 
 
 ## WandB setup
-[https://docs.wandb.ai/](WandB) is used for our projects. WandB provides stores training data online so it can be used easily to monitor all training tasks.
+[WandB](https://docs.wandb.ai/) is used for our projects. WandB provides stores training data online so it can be used easily to monitor all training tasks.
 
 To create an account go to the wandb website and install through `pip install wandb` (or `pip install -r requirements.txt` ).
 
@@ -183,6 +183,7 @@ We also support using scc resources for training GAN model. If you would like to
 
 ## Generated Examples
 ![image](https://github.com/YCHuang2112sub/EC523_Project_G/assets/129738407/57bdc99e-1b6f-43c5-9f23-8b26eb1d07d6)
+
 ControlNet Fine-tuned Results. From top to bottom, the result are generated with different ways of image combination: 
 i) feature addition ii) feature concatenation and iii) feature attention respectively. 
 The leftmost images are the background; the middle left images are the figures; the middle right images are the ground truth; the rightmost images are the generated ones.
