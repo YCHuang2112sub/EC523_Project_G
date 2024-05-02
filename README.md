@@ -1,7 +1,7 @@
 ﻿# EC523_Project_G
 
 ## ✨🌠⬇️☄️ Datasets
-![https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link](Dataset Link (Make sure you login with BU account))
+[Dataset Link (Make sure you login with BU account)](https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link)
 
 There are 7608 training pairs and 598 testing pairs generated from 28 videos, including both Gochūmon wa Usagi Desu ka and Tonikaku Kawaii.  
 
