@@ -1,6 +1,6 @@
-﻿# EC523_Project_G
+﻿# Text-Guided Image Integration
 
-## ✨🌠⬇️☄️ Datasets
+## Datasets  ⬇️
 [Dataset Link (Make sure you login with BU account)](https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link)
 
 There are 7608 training pairs and 598 testing pairs generated from 28 videos, including both Gochūmon wa Usagi Desu ka and Tonikaku Kawaii.  
@@ -8,7 +8,7 @@ There are 7608 training pairs and 598 testing pairs generated from 28 videos, in
 Each pair of data contains a subject image, a background image and a scene which combines previous 2 images.
 The scene description and its corresponding image paths are stored in PROCESSING_RECORDING.json.
 
-## Getting Started
+## Getting Started  ✨
 Commands to get started:
 ```
 module load python3
@@ -19,7 +19,7 @@ source env/bin/activate
 pip install -r requirements.txt
 ```
 
-## Structure in the repository:
+## Structure in the repository  🧑🏻‍💻
 ```
   Repo
     |-- Evaluation                               #Evaluation Pipeline
@@ -89,7 +89,7 @@ pip install -r requirements.txt
 To create an account go to the wandb website and install through `pip install wandb` (or `pip install -r requirements.txt` ).
 
 
-## Control-Net ヾ(*´▽‘*)ﾉ
+## Control-Net  👀
 All code for Controlnet implementation can be found here /EC523_Project_G/src_controlnet. To train, simply run python3 control_net_train.py. For training with different configurations,
  please modify the function def get_args_list() in control_net_config.py 
 ```
@@ -126,7 +126,7 @@ checkpoint = "checkpoint-72000"
 ```
 
 
-## Inference  ͡[๏̯͡๏]
+## Inference  🤖
 All code for baseline method implementation can be found here `/EC523_Project_G/src_inference`
 To train simply run  `python3 inference_loop.py`. For training with different configuration you should modify source code in 199 lines in inference_loop.py model_config.update() and following codes
 ```
@@ -166,7 +166,7 @@ model_config.update({
         'mse_guidance_scale': mse_guidance_scale
     })
 ```
-## GAN-training
+## GAN  🦄
 All code for GAN implementation can be found here `/EC523_Project_G/src_GAN`
 To train simply run  `python3 train_new_gan.py`. For training with different configuration and model simply modify the following line  in train_new_gan.py
 
@@ -181,7 +181,7 @@ For debugging purposes we also provided a ipynb file you can find it here `/EC52
 
 We also support using scc resources for training GAN model. If you would like to train using scc's GPU simply submit job by running `/EC523_Project_G/notebooks/src_GAN/qsub job.sh`. 
 
-## Generated Examples
+## Generated Examples  👑
 ![image](https://github.com/YCHuang2112sub/EC523_Project_G/assets/129738407/57bdc99e-1b6f-43c5-9f23-8b26eb1d07d6)
 
 ControlNet Fine-tuned Results. From top to bottom, the result are generated with different ways of image combination: 
@@ -189,7 +189,7 @@ i) feature addition ii) feature concatenation and iii) feature attention respect
 The leftmost images are the background; the middle left images are the figures; the middle right images are the ground truth; the rightmost images are the generated ones.
 
 
-## Evaluation
+## Evaluation  😎
 
 
 ## Credits
