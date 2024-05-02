@@ -20,9 +20,44 @@ pip install -r requirements.txt
 To create an account go to the wandb website and install through `pip install wandb` (or `pip install -r requirements.txt` ).
 
 
-## Control-Net
+## Control-Net ╭(●｀∀´●)╯╰(●’◡’●)╮ (●’◡’●)ﾉ ヾ(*´▽‘*)ﾉ
+All code for Controlnet implementation can be found here /EC523_Project_G/src_controlnet. To train, simply run python3 control_net_train.py. For training with different configurations,
+ please modify the function def get_args_list() in control_net_config.py 
+```
+args_list = ["--pretrained_model_name_or_path", "stabilityai/stable-diffusion-2-1-base",
+    	"--output_dir", "model_out",
+    	"--dataset_name","multimodalart/facesyntheticsspigacaptioned",
+    	"--conditioning_image_column", "spiga_seg", \
+    	"--image_column", "image", \
+    	"--caption_column","image_caption", \
+    	"--resolution=256", \
+    	"--learning_rate", "1e-5", \
+    	# "--validation_image", '"./face_landmarks1.png " "./face_landmarks2.png" "./face_landmarks3.png"', \
+    	# "--validation_prompt", '"High-quality close-up dslr photo of man wearing a hat with trees in the background" "Girl smiling, professional dslr photograph, dark background, studio lights, high quality" "Portrait of a clown face, oil on canvas, bittersweet expression"', \
+    	"--train_batch_size",f"{BATCH_SIZE}", \
+    	"--num_train_epochs",f"{num_train_epochs}", \
+    	"--tracker_project_name", "controlnet", \
+    	# "--enable_xformers_memory_efficient_attention", \
+    	# "--checkpointing_steps", "5000", \
+    	# "--validation_steps", "5000", \
+    	"--checkpointing_steps", f"{checkpointing_steps}", \
+    	"--validation_steps", f"{validation_steps}", \
+    	"--report_to", "wandb", \
+    	# "--push_to_hub",
+    	"--cache_dir", "cache", \
+    	"--num_validation_images", "20", \
+    	"--has_eval_result_output_to_terminal", 0,  #"True" or 0 \
+    	"--controlnet_embedding_merging_mode", "Addition",
+    	#Addition, Concatenation_01, Concatenation_02, Attention
+    	]
+```
+The model will save the checkpoint based on args_list and save it in the same directory of src_controlnet. To run an evaluation of ControlNet, run code control_net_evaluation.ipynb, which will generate an image and store it in the output_image folder. You can modify the model checkpoint by simply changing code:
+```
+checkpoint = "checkpoint-72000"
+```
 
-## Inference
+
+## Inference  ͡[๏̯͡๏]
 All code for baseline method implementation can be found here `/EC523_Project_G/src_inference`
 To train simply run  `python3 inference_loop.py`. For training with different configuration you should modify source code in 199 lines in inference_loop.py model_config.update() and following codes
 ```
