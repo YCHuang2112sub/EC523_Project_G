@@ -1,7 +1,7 @@
 ﻿# EC523_Project_G
 
 ## ✨🌠⬇️☄️ Datasets
-[https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link]{Dataset Link (Make sure you login with BU account)}. There are 7608 training pairs and 598 testing pairs generated from 28 videos, including both Gochūmon wa Usagi Desu ka and Tonikaku Kawaii.  
+[https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link](Dataset Link (Make sure you login with BU account)). There are 7608 training pairs and 598 testing pairs generated from 28 videos, including both Gochūmon wa Usagi Desu ka and Tonikaku Kawaii.  
 
 Each pair of data contains a subject image, a background image and a scene which combines previous 2 images.
 The scene description and its corresponding image paths are stored in PROCESSING_RECORDING.json.
@@ -178,6 +178,13 @@ For debugging purposes we also provided a ipynb file you can find it here `/EC52
 
 
 We also support using scc resources for training GAN model. If you would like to train using scc's GPU simply submit job by running `/EC523_Project_G/notebooks/src_GAN/qsub job.sh`. 
+
+## Generated Examples
+![image](https://github.com/YCHuang2112sub/EC523_Project_G/assets/129738407/57bdc99e-1b6f-43c5-9f23-8b26eb1d07d6)
+ControlNet Fine-tuned Results. From top to bottom, the result are generated with different ways of image combination: 
+i) feature addition ii) feature concatenation and iii) feature attention respectively. 
+The leftmost images are the background; the middle left images are the figures; the middle right images are the ground truth; the rightmost images are the generated ones.
+
 
 ## Evaluation
 
