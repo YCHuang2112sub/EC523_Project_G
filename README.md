@@ -1,7 +1,8 @@
 ﻿# EC523_Project_G
 
 
-## Datasets
+## ✨🌠⬇️ Datasets
+[https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link]{Dataset Link (Make sure you login with BU account)}.
 
 ## Getting Started
 Commands to get started:
