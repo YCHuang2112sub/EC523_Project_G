@@ -1,8 +1,10 @@
 ﻿# EC523_Project_G
 
+## ✨🌠⬇️☄️ Datasets
+[https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link]{Dataset Link (Make sure you login with BU account)}. There are 7608 training pairs and 598 testing pairs generated from 28 videos, including both Gochūmon wa Usagi Desu ka and Tonikaku Kawaii.  
 
-## ✨🌠⬇️ Datasets
-[https://drive.google.com/drive/folders/1kAZTuUCdl9n1POjpV3j5HnWQ8rzlQO6O?usp=drive_link]{Dataset Link (Make sure you login with BU account)}.
+Each pair of data contains a subject image, a background image and a scene which combines previous 2 images.
+The scene description and its corresponding image paths are stored in PROCESSING_RECORDING.json.
 
 ## Getting Started
 Commands to get started:
